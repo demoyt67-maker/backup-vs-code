@@ -15,7 +15,7 @@ import {
   SET6_LEVELS, SET6_TITLE, SET6_TOTAL_LEVELS,
   type SetId,
 } from '@/data/learningSets';
-import { ARABIC_WORDS, CATEGORY_LABELS, type ArabicWord, type WordCategory } from '@/data/arabicWords';
+import { ARABIC_WORDS, CATEGORY_LABELS, type WordCategory } from '@/data/arabicWords';
 
 type CurriculumApi = ReturnType<typeof useTeacherCurriculum>;
 
@@ -559,9 +559,9 @@ function TeacherDashboard({
                   </span>
                   <div className="min-w-0 flex-1">
                     <h5 className="font-bold text-primary-900">{set.title}</h5>
-                    <p className="text-xs text-primary-500/70">{set.totalLevels} built-in levels{sd.addedLevels.length > 0 ? ` + ${sd.addedLevels.length} custom` : ''}</p>
+                    <p className="text-xs text-primary-700">{set.totalLevels} built-in levels{sd.addedLevels.length > 0 ? ` + ${sd.addedLevels.length} custom` : ''}</p>
                   </div>
-                  <ChevronRight size={18} className={`shrink-0 text-primary-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                  <ChevronRight size={18} className={`shrink-0 text-primary-600 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                 </button>
 
                 {/* Expanded: levels list with edit controls */}
@@ -577,8 +577,8 @@ function TeacherDashboard({
                         <div key={lvl.level} className="mb-2 rounded-lg ring-1 ring-primary-50">
                           <div className="flex items-center justify-between gap-2 p-2.5">
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-bold text-primary-800">Level {lvl.level}: {displayTitle}</p>
-                              {custom?.content && <p className="mt-0.5 text-xs text-primary-500/70 line-clamp-2">{custom.content}</p>}
+                              <p className="text-sm font-bold text-primary-900">Level {lvl.level}: {displayTitle}</p>
+                              {custom?.content && <p className="mt-0.5 text-xs text-primary-700 line-clamp-2">{custom.content}</p>}
                             </div>
                             <button
                               onClick={() => startEdit(set.id, lvl.level, displayTitle, custom?.content || '')}
@@ -678,7 +678,7 @@ function TeacherDashboard({
                     ) : (
                       <button
                         onClick={() => { setShowAddLevel(true); setEditingLevel(null); setNewLevelTitle(''); setNewLevelContent(''); }}
-                        className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-primary-200 px-4 py-2.5 text-sm font-bold text-primary-500 transition-all hover:border-primary-400 hover:bg-primary-50/30 active:scale-95"
+                        className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-primary-200 px-4 py-2.5 text-sm font-bold text-primary-700 transition-all hover:border-primary-400 hover:bg-primary-50/30 active:scale-95"
                       >
                         <Plus size={16} /> Add New Level
                       </button>
@@ -839,9 +839,9 @@ function WordManagementSection() {
               <div className="flex items-center justify-between gap-2 p-2.5">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-arabic text-xl font-bold text-primary-800">{word.arabic}</span>
+                    <span className="font-arabic text-xl font-bold text-primary-900">{word.arabic}</span>
                     <span className="font-malayalam text-sm text-primary-600">{word.malayalam}</span>
-                    <span className="text-xs text-primary-500/70">{word.english}</span>
+                    <span className="text-xs text-primary-700">{word.english}</span>
                   </div>
                   <span className="mt-0.5 inline-block rounded-full bg-primary-50 px-2 py-0.5 text-[10px] font-bold text-primary-600">
                     {CATEGORY_LABELS[word.category].english}
@@ -925,7 +925,7 @@ function WordManagementSection() {
       {/* Add new word */}
       {showAdd ? (
         <div className="animate-fade-in rounded-lg bg-primary-50/50 p-3 ring-1 ring-primary-100">
-          <h5 className="mb-2 text-sm font-bold text-primary-800">Add New Arabic Word</h5>
+          <h5 className="mb-2 text-sm font-bold text-primary-900">Add New Arabic Word</h5>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="mb-1 block text-xs font-semibold text-primary-600">Arabic Word</label>
@@ -990,7 +990,7 @@ function WordManagementSection() {
       ) : (
         <button
           onClick={() => { setShowAdd(true); setEditingId(null); }}
-          className="flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-primary-200 px-4 py-2.5 text-sm font-bold text-primary-500 transition-all hover:border-primary-400 hover:bg-primary-50/30 active:scale-95"
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-primary-200 px-4 py-2.5 text-sm font-bold text-primary-700 transition-all hover:border-primary-400 hover:bg-primary-50/30 active:scale-95"
         >
           <Plus size={16} /> Add New Word
         </button>

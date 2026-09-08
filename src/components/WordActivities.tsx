@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { CheckCircle2, XCircle, RotateCcw, Trophy, Eye, Shuffle, Star } from 'lucide-react';
+import { CheckCircle2, XCircle, RotateCcw, Trophy, Eye, Star } from 'lucide-react';
 import {
   ARABIC_WORDS,
   CATEGORY_LABELS,
@@ -16,11 +16,31 @@ import {
 export function WordLearnLevel({
   wordsLearned,
   onToggle,
+  onMark,
 }: {
   wordsLearned: Set<string>;
   onToggle: (key: string) => void;
+  onMark: (key: string) => void;
 }) {
   const categories = Object.keys(CATEGORY_LABELS) as WordCategory[];
+  const allWordsLearned = useMemo(
+    () => ARABIC_WORDS.every((word) => wordsLearned.has(`s6-l1-${word.id}`)),
+    [wordsLearned],
+  );
+
+  useEffect(() => {
+    const levelKey = 's6-l1';
+    const levelIsMarked = wordsLearned.has(levelKey);
+
+    if (allWordsLearned && !levelIsMarked) {
+      onMark(levelKey);
+      return;
+    }
+
+    if (!allWordsLearned && levelIsMarked) {
+      onToggle(levelKey);
+    }
+  }, [allWordsLearned, onMark, onToggle, wordsLearned]);
 
   return (
     <div className="space-y-4">
@@ -30,8 +50,8 @@ export function WordLearnLevel({
         return (
           <div key={cat}>
             <div className="mb-2 flex items-center gap-2">
-              <h5 className="text-sm font-bold text-primary-800">{catLabel.english}</h5>
-              <span className="font-malayalam text-xs text-primary-500/70">{catLabel.malayalam}</span>
+              <h5 className="text-sm font-bold text-primary-900">{catLabel.english}</h5>
+              <span className="font-malayalam text-xs text-primary-700">{catLabel.malayalam}</span>
             </div>
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
               {catWords.map((word) => {
@@ -51,11 +71,11 @@ export function WordLearnLevel({
                       </span>
                     )}
                     <div className="mt-2 flex h-16 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-teal-50 transition-transform group-hover:scale-105">
-                      <span className="font-arabic text-4xl font-bold text-primary-800">{word.arabic}</span>
+                      <span className="font-arabic text-4xl font-bold text-primary-900">{word.arabic}</span>
                     </div>
                     <p className="mt-2 font-malayalam text-sm font-semibold text-primary-700">{word.malayalam}</p>
-                    <p className="text-xs font-medium text-primary-500/70">{word.english}</p>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-primary-400">
+                    <p className="text-xs font-medium text-primary-700">{word.english}</p>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-primary-600">
                       {isLearned ? 'Tap to undo' : 'Tap when learned'}
                     </p>
                   </button>
@@ -96,6 +116,7 @@ export function WordMatchingLevel({
   const TOTAL_ROUNDS = 3;
 
   const currentWords = useMemo(() => {
+    void round;
     return pickRandom(ARABIC_WORDS, WORDS_PER_ROUND);
   }, [round]);
 
@@ -151,8 +172,6 @@ export function WordMatchingLevel({
     setRoundDone(false);
   };
 
-  const meaningText = (w: ArabicWord) => matchLang === 'malayalam' ? w.malayalam : w.english;
-
   return (
     <div className="space-y-3">
       {/* Progress bar */}
@@ -176,7 +195,7 @@ export function WordMatchingLevel({
 
       {!isCompleted && (
         <>
-          <p className="text-center text-xs font-semibold text-primary-500/70">
+          <p className="text-center text-xs font-semibold text-primary-700">
             {matchLang === 'malayalam' ? 'Tap an Arabic word, then tap its Malayalam meaning' : 'Tap an Arabic word, then tap its English meaning'}
           </p>
 
@@ -198,7 +217,7 @@ export function WordMatchingLevel({
                         : 'bg-white ring-primary-50 hover:-translate-y-0.5 hover:shadow-md'
                   }`}
                 >
-                  <span className="font-arabic text-3xl font-bold text-primary-800">{word.arabic}</span>
+                  <span className="font-arabic text-3xl font-bold text-primary-900">{word.arabic}</span>
                   {isMatched && (
                     <CheckCircle2 size={14} className="mx-auto mt-1 text-green-500" />
                   )}
@@ -254,7 +273,7 @@ export function WordMatchingLevel({
 
           <button
             onClick={restart}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-primary-500 ring-1 ring-primary-100 transition-all hover:bg-primary-50 active:scale-95"
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-primary-700 ring-1 ring-primary-100 transition-all hover:bg-primary-50 active:scale-95"
           >
             <RotateCcw size={14} /> Restart
           </button>
@@ -286,6 +305,7 @@ export function WordMultipleChoiceLevel({
   const TOTAL_ROUNDS = 5;
 
   const { target, options } = useMemo(() => {
+    void round;
     const targetWord = pickRandom(ARABIC_WORDS, 1)[0];
     const distractors = pickRandom(
       ARABIC_WORDS.filter((w) => w.id !== targetWord.id),
@@ -370,7 +390,7 @@ export function WordMultipleChoiceLevel({
                         : 'bg-white ring-primary-50 hover:-translate-y-0.5 hover:shadow-md'
                   }`}
                 >
-                  <span className="font-arabic text-3xl font-bold text-primary-800">{word.arabic}</span>
+                  <span className="font-arabic text-3xl font-bold text-primary-900">{word.arabic}</span>
                   {showResult && isCorrect && <CheckCircle2 size={16} className="mx-auto mt-1 text-green-500" />}
                   {showResult && isSelected && !isCorrect && <XCircle size={16} className="mx-auto mt-1 text-red-500" />}
                 </button>
@@ -399,7 +419,7 @@ export function WordMultipleChoiceLevel({
 
           <button
             onClick={restart}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-primary-500 ring-1 ring-primary-100 transition-all hover:bg-primary-50 active:scale-95"
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-primary-700 ring-1 ring-primary-100 transition-all hover:bg-primary-50 active:scale-95"
           >
             <RotateCcw size={14} /> Restart
           </button>
@@ -541,7 +561,7 @@ export function WordMemoryLevel({
               <p className="text-sm text-white/80">Cards will flip in 3 seconds...</p>
             </div>
           ) : (
-            <p className="text-center text-xs font-semibold text-primary-500/70">
+            <p className="text-center text-xs font-semibold text-primary-700">
               Tap two cards to find matching pairs
             </p>
           )}
@@ -567,7 +587,7 @@ export function WordMemoryLevel({
                   }`}
                 >
                   {isFlipped ? (
-                    <span className={card.isArabic ? 'font-arabic text-2xl font-bold text-primary-800' : 'text-sm font-bold text-primary-700'}>
+                    <span className={card.isArabic ? 'font-arabic text-2xl font-bold text-primary-900' : 'text-sm font-bold text-primary-700'}>
                       {card.text}
                     </span>
                   ) : (
@@ -594,7 +614,7 @@ export function WordMemoryLevel({
 
           <button
             onClick={restart}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-primary-500 ring-1 ring-primary-100 transition-all hover:bg-primary-50 active:scale-95"
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-primary-700 ring-1 ring-primary-100 transition-all hover:bg-primary-50 active:scale-95"
           >
             <RotateCcw size={14} /> Restart
           </button>
@@ -637,6 +657,7 @@ export function WordMixedChallengeLevel({
   const isMatching = challengeType === 'match-malayalam' || challengeType === 'match-english';
 
   const { currentWords, target, options } = useMemo(() => {
+    void round;
     if (isMatching) {
       return {
         currentWords: pickRandom(ARABIC_WORDS, 4),
@@ -652,7 +673,7 @@ export function WordMixedChallengeLevel({
         options: shuffle([targetWord, ...distractors]),
       };
     }
-  }, [round]);
+  }, [isMatching, round]);
 
   const shuffledMeanings = useMemo(() => isMatching ? shuffle(currentWords) : [], [currentWords, isMatching]);
 
@@ -714,8 +735,6 @@ export function WordMixedChallengeLevel({
     setWrongPair(null);
   };
 
-  const meaningText = (w: ArabicWord) => challengeType === 'match-malayalam' ? w.malayalam : w.english;
-
   return (
     <div className="space-y-3">
       {/* Progress */}
@@ -740,7 +759,7 @@ export function WordMixedChallengeLevel({
         </div>
       ) : isMatching ? (
         <>
-          <p className="text-center text-xs font-semibold text-primary-500/70">
+          <p className="text-center text-xs font-semibold text-primary-700">
             {challengeType === 'match-malayalam' ? 'Match Arabic → Malayalam' : 'Match Arabic → English'}
           </p>
           <div className="grid grid-cols-2 gap-2.5">
@@ -758,7 +777,7 @@ export function WordMixedChallengeLevel({
                       : 'bg-white ring-primary-50 hover:-translate-y-0.5 hover:shadow-md'
                   }`}
                 >
-                  <span className="font-arabic text-3xl font-bold text-primary-800">{word.arabic}</span>
+                  <span className="font-arabic text-3xl font-bold text-primary-900">{word.arabic}</span>
                   {isMatched && <CheckCircle2 size={14} className="mx-auto mt-1 text-green-500" />}
                 </button>
               );
@@ -829,7 +848,7 @@ export function WordMixedChallengeLevel({
                       : 'bg-white ring-primary-50 hover:-translate-y-0.5 hover:shadow-md'
                   }`}
                 >
-                  <span className="font-arabic text-3xl font-bold text-primary-800">{word.arabic}</span>
+                  <span className="font-arabic text-3xl font-bold text-primary-900">{word.arabic}</span>
                   {showResult && isCorrect && <CheckCircle2 size={16} className="mx-auto mt-1 text-green-500" />}
                   {showResult && isSelected && !isCorrect && <XCircle size={16} className="mx-auto mt-1 text-red-500" />}
                 </button>
@@ -854,7 +873,7 @@ export function WordMixedChallengeLevel({
 
       <button
         onClick={restart}
-        className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-primary-500 ring-1 ring-primary-100 transition-all hover:bg-primary-50 active:scale-95"
+        className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-bold text-primary-700 ring-1 ring-primary-100 transition-all hover:bg-primary-50 active:scale-95"
       >
         <RotateCcw size={14} /> Restart
       </button>

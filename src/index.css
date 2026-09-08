@@ -1,9 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Malayalam:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: light;
+  --text-body: #163b36;
+  --text-muted: #4d6460;
+  --bg-surface: #fffdf9;
 }
 
 * {
@@ -17,15 +22,63 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  font-size: 16px;
+  line-height: 1.6;
+  background-color: #f3f9f6;
+  color: var(--text-body);
 }
 
 body {
   background-color: #f3f9f6;
-  color: #0b4239;
+  color: var(--text-body);
   overflow-x: hidden;
   overscroll-behavior: none;
   touch-action: manipulation;
   -webkit-touch-callout: none;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: inherit;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+}
+
+p, span, label, button, input, textarea, select {
+  font-feature-settings: 'kern' 1, 'liga' 1;
+}
+
+button,
+[role='button'],
+.interactive-card {
+  font-weight: 700;
+}
+
+html,
+body,
+#root,
+.islamic-pattern,
+.screen-shell,
+.screen-panel,
+.screen-panel-dark,
+.home-shell,
+.home-hero,
+.home-reveal,
+button,
+nav,
+header,
+[role='button'],
+.interactive-card {
+  transition:
+    background-color 450ms ease,
+    background 450ms ease,
+    border-color 450ms ease,
+    box-shadow 450ms ease,
+    color 450ms ease,
+    filter 450ms ease,
+    opacity 450ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: background-color, background, border-color, box-shadow, color, filter, opacity;
 }
 
 /* Prevent text selection on touch for all interactive elements */
@@ -40,6 +93,10 @@ header,
 
 .font-arabic {
   font-family: 'Amiri', 'Scheherazade New', serif;
+  font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  font-weight: 700;
 }
 .font-malayalam {
   font-family: 'Noto Sans Malayalam', sans-serif;
@@ -72,9 +129,109 @@ header,
   animation: home-rise 0.5s both cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+button,
+[role='button'],
+.interactive-card {
+  transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 180ms ease, filter 180ms ease, background-color 450ms ease, border-color 450ms ease, color 450ms ease;
+}
+
+button:hover,
+[role='button']:hover,
+.interactive-card:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.04);
+}
+
+button:active,
+[role='button']:active,
+.interactive-card:active {
+  animation: button-pop 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.animate-card-pop {
+  animation: card-pop 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-success-pulse {
+  animation: success-pulse 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.success-burst {
+  animation: success-pulse 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sparkle-burst {
+  position: relative;
+  overflow: hidden;
+}
+
+.sparkle-burst::before,
+.sparkle-burst::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.95) 0 1.2px, transparent 1.5px),
+    radial-gradient(circle, rgba(246,217,139,0.9) 0 1.4px, transparent 1.8px),
+    radial-gradient(circle, rgba(255,255,255,0.8) 0 1.1px, transparent 1.4px);
+  background-size: 110px 110px;
+  background-position: 10% 20%, 45% 50%, 75% 35%;
+  opacity: 0.65;
+}
+
+@keyframes button-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.97); }
+  70% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+@keyframes card-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes success-pulse {
+  0%, 100% { transform: scale(1); }
+  30% { transform: scale(1.08); }
+  60% { transform: scale(0.98); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .screen-reveal {
+  .screen-reveal,
+  .animate-card-pop,
+  .animate-slide-up,
+  .sparkle-burst,
+  .success-burst {
     animation: none;
+  }
+
+  button,
+  [role='button'],
+  .interactive-card {
+    transition: none;
   }
 }
 
@@ -140,7 +297,8 @@ header,
 
 /* Islamic pattern background — subtle repeating motif */
 .islamic-pattern {
-  background-color: #f3f9f6;
+  background-color: var(--theme-background, #f3f9f6);
+  transition: background-color 500ms ease, background-image 500ms ease, border-color 500ms ease, box-shadow 500ms ease;
   background-image:
     radial-gradient(circle at 50% 50%, rgba(13, 124, 102, 0.05) 0, rgba(13, 124, 102, 0.05) 2px, transparent 2px),
     radial-gradient(circle at 0 0, rgba(217, 169, 58, 0.04) 0, rgba(217, 169, 58, 0.04) 1.5px, transparent 1.5px),

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Lock, CheckCircle2, ChevronRight, Star, RotateCcw, BookOpen, Sparkles, Moon, Wind, Languages } from 'lucide-react';
 import { BackHeader } from '@/components/BackHeader';
 import { HarakatPractice } from '@/components/HarakatPractice';
+import { LetterSoundPractice } from '@/components/LetterSoundPractice';
+import { LETTER_SOUND_PRACTICE_ITEMS } from '@/data/letterSoundPractice';
 import { WordLearnLevel, WordMatchingLevel, WordMultipleChoiceLevel, WordMemoryLevel, WordMixedChallengeLevel } from '@/components/WordActivities';
 import {
   SET1_LEVELS,
@@ -30,66 +32,92 @@ import {
   type SetId,
 } from '@/data/learningSets';
 import { TOTAL_LETTERS, type ArabicLetter } from '@/data/letters';
-import { ARABIC_WORDS } from '@/data/arabicWords';
 
 interface Props {
   onHome: () => void;
+  selectedClass: 1 | 2 | 3;
   learned: Set<number>;
   onToggleLetter: (letterIndex: number) => void;
   harakatLearned: Set<string>;
   onToggleHarakat: (key: string) => void;
   onMarkHarakat: (key: string) => void;
+  letterSoundPracticeLearned: Set<string>;
+  onMarkLetterSoundPractice: (key: string) => void;
   sukoonLearned: Set<string>;
   onToggleSukoon: (key: string) => void;
-  onMarkSukoon: (key: string) => void;
   tanweenLearned: Set<string>;
   onToggleTanween: (key: string) => void;
-  onMarkTanween: (key: string) => void;
   wordsLearned: Set<string>;
   onToggleWord: (key: string) => void;
   onMarkWord: (key: string) => void;
   onResetLearning: () => void;
 }
 
-// Total combos for completion checks
-const SET2_TOTAL_ITEMS = SET2_LEVELS.reduce((sum, l) => sum + l.items.length, 0);
-const SET4_TOTAL_ITEMS = SET4_LEVELS.reduce((sum, l) => sum + l.items.length, 0);
-const SET5_TOTAL_ITEMS = SET5_LEVELS.reduce((sum, l) => sum + l.items.length, 0);
-const SET6_TOTAL_ITEMS = ARABIC_WORDS.length;
+// Exact required activity keys for unlock/progress checks
+const SET2_REQUIRED_KEYS = SET2_LEVELS.flatMap((lvl) =>
+  lvl.items.map((item) => harakatItemKey(item.letter.index, item.haraka)),
+);
+const SET4_REQUIRED_KEYS = SET4_LEVELS.flatMap((lvl) =>
+  lvl.items.map((_, index) => `s4-${lvl.level}-${index}`),
+);
+const SET5_REQUIRED_KEYS = SET5_LEVELS.flatMap((lvl) => [
+  ...lvl.items.map((item) => tanweenItemKey(item.letter.index, item.tanween)),
+  ...(lvl.readingItems ?? []).map((_, index) => `s5-read-${lvl.level}-${index}`),
+]);
+const SET6_REQUIRED_KEYS = SET6_LEVELS.map((lvl) => `s6-l${lvl.level}`);
+
+const SET2_TOTAL_ITEMS = SET2_REQUIRED_KEYS.length;
+const SET4_TOTAL_ITEMS = SET4_REQUIRED_KEYS.length;
+const SET5_TOTAL_ITEMS = SET5_REQUIRED_KEYS.length;
+const SET6_TOTAL_ITEMS = SET6_REQUIRED_KEYS.length;
+
+const AVAILABLE_SETS_BY_CLASS: Record<1 | 2 | 3, SetId[]> = {
+  1: ['set1'],
+  2: ['set2', 'set4'],
+  3: ['set5', 'set6'],
+};
 
 export function LearnView({
   onHome,
+  selectedClass,
   learned,
   onToggleLetter,
   harakatLearned,
   onToggleHarakat,
   onMarkHarakat,
+  letterSoundPracticeLearned,
+  onMarkLetterSoundPractice,
   sukoonLearned,
   onToggleSukoon,
-  onMarkSukoon,
   tanweenLearned,
   onToggleTanween,
-  onMarkTanween,
   wordsLearned,
   onToggleWord,
   onMarkWord,
   onResetLearning,
 }: Props) {
-  const [openSet, setOpenSet] = useState<SetId>('set1');
+  const availableSets = AVAILABLE_SETS_BY_CLASS[selectedClass];
+  const [openSet, setOpenSet] = useState<SetId>(availableSets[0]);
   const [openLevel, setOpenLevel] = useState<number | null>(1);
 
   // ----- Completion checks -----
   const set1Complete = learned.size >= TOTAL_LETTERS;
-  const set2Complete = harakatLearned.size >= SET2_TOTAL_ITEMS;
-  const set4Complete = sukoonLearned.size >= SET4_TOTAL_ITEMS;
-  const set5Complete = tanweenLearned.size >= SET5_TOTAL_ITEMS;
-  const set6Complete = wordsLearned.has('s6-l1') && wordsLearned.has('s6-l2') && wordsLearned.has('s6-l3') && wordsLearned.has('s6-l4') && wordsLearned.has('s6-l5') && wordsLearned.has('s6-l6');
+  const set2Complete = SET2_REQUIRED_KEYS.every((key) => harakatLearned.has(key));
+  const letterSoundPracticeCompletedCount = LETTER_SOUND_PRACTICE_ITEMS.filter((item) => letterSoundPracticeLearned.has(item.id)).length;
+  const set4Complete = SET4_REQUIRED_KEYS.every((key) => sukoonLearned.has(key));
+  const set5Complete = SET5_REQUIRED_KEYS.every((key) => tanweenLearned.has(key));
+  const set6Complete = SET6_REQUIRED_KEYS.every((key) => wordsLearned.has(key));
 
-  // ----- Unlock chain: 1 → 2 → 4 → 5 -----
-  const set2Unlocked = set1Complete;
-  const set4Unlocked = set2Complete;
-  const set5Unlocked = set4Complete;
-  const set6Unlocked = set5Complete;
+  const set2CompletedCount = SET2_REQUIRED_KEYS.filter((key) => harakatLearned.has(key)).length;
+  const set4CompletedCount = SET4_REQUIRED_KEYS.filter((key) => sukoonLearned.has(key)).length;
+  const set5CompletedCount = SET5_REQUIRED_KEYS.filter((key) => tanweenLearned.has(key)).length;
+  const set6CompletedCount = SET6_REQUIRED_KEYS.filter((key) => wordsLearned.has(key)).length;
+
+  // ----- Unlock chain: 1 → 2 → 4 → 5 → 6 -----
+  const set2Unlocked = selectedClass >= 2;
+  const set4Unlocked = selectedClass === 2 ? set2Complete : selectedClass === 3;
+  const set5Unlocked = selectedClass === 3;
+  const set6Unlocked = selectedClass === 3 ? set5Complete : false;
 
   // ----- Set 1 helpers -----
   const isSet1LevelUnlocked = (level: number): boolean => {
@@ -136,18 +164,24 @@ export function LearnView({
 
   const set5LevelCompletedCount = (level: number): number => {
     const lvl = SET5_LEVELS[level - 1];
-    const keys = lvl.items.map((item) => tanweenItemKey(item.letter.index, item.tanween));
-    return keys.filter((k) => tanweenLearned.has(k)).length;
+    const itemKeys = lvl.items.map((item) => tanweenItemKey(item.letter.index, item.tanween));
+    const readingKeys = (lvl.readingItems ?? []).map((_, index) => `s5-read-${lvl.level}-${index}`);
+    return [...itemKeys, ...readingKeys].filter((key) => tanweenLearned.has(key)).length;
+  };
+
+  const set5LevelRequiredCount = (level: number): number => {
+    const lvl = SET5_LEVELS[level - 1];
+    return lvl.items.length + (lvl.readingItems?.length ?? 0);
   };
 
   // ----- Common -----
   const handleSetClick = (set: SetId) => {
     const unlockedMap: Record<SetId, boolean> = {
-      set1: true,
-      set2: set2Unlocked,
-      set4: set4Unlocked,
-      set5: set5Unlocked,
-      set6: set6Unlocked,
+      set1: selectedClass === 1,
+      set2: selectedClass >= 2,
+      set4: selectedClass === 2 ? set2Complete : selectedClass === 3,
+      set5: selectedClass === 3,
+      set6: selectedClass === 3 ? set5Complete : false,
     };
     if (!unlockedMap[set]) return;
     setOpenSet(set);
@@ -160,7 +194,7 @@ export function LearnView({
   };
 
   // ----- Set metadata for selector -----
-  const setButtons: {
+  type SetButton = {
     id: SetId;
     title: string;
     subtitle: string;
@@ -171,7 +205,9 @@ export function LearnView({
     inactiveUnlockedCls: string;
     iconActiveCls: string;
     iconInactiveCls: string;
-  }[] = [
+  };
+
+  const setButtons = [
     {
       id: 'set1',
       title: SET1_TITLE,
@@ -187,7 +223,7 @@ export function LearnView({
     {
       id: 'set2',
       title: SET2_TITLE,
-      subtitle: set2Unlocked ? `${SET2_TOTAL_LEVELS} levels • ${harakatLearned.size} learned` : 'Complete Set 1 to unlock',
+      subtitle: set2Unlocked ? `${SET2_TOTAL_LEVELS} levels • ${set2CompletedCount}/${SET2_TOTAL_ITEMS} learned` : 'Complete Set 1 to unlock',
       icon: Sparkles,
       unlocked: set2Unlocked,
       complete: set2Complete,
@@ -199,7 +235,7 @@ export function LearnView({
     {
       id: 'set4',
       title: SET4_TITLE,
-      subtitle: set4Unlocked ? `${SET4_TOTAL_LEVELS} levels • ${sukoonLearned.size} learned` : 'Complete Set 2 to unlock',
+      subtitle: set4Unlocked ? `${SET4_TOTAL_LEVELS} levels • ${set4CompletedCount}/${SET4_TOTAL_ITEMS} learned` : 'Complete Set 2 to unlock',
       icon: Moon,
       unlocked: set4Unlocked,
       complete: set4Complete,
@@ -211,7 +247,7 @@ export function LearnView({
     {
       id: 'set5',
       title: SET5_TITLE,
-      subtitle: set5Unlocked ? `${SET5_TOTAL_LEVELS} levels • ${tanweenLearned.size} learned` : 'Complete Set 4 to unlock',
+      subtitle: set5Unlocked ? `${SET5_TOTAL_LEVELS} levels • ${set5CompletedCount}/${SET5_TOTAL_ITEMS} learned` : 'Complete Set 4 to unlock',
       icon: Wind,
       unlocked: set5Unlocked,
       complete: set5Complete,
@@ -223,7 +259,7 @@ export function LearnView({
     {
       id: 'set6',
       title: SET6_TITLE,
-      subtitle: set6Unlocked ? `${SET6_TOTAL_LEVELS} levels • ${wordsLearned.size} learned` : 'Complete Set 5 to unlock',
+      subtitle: set6Unlocked ? `${SET6_TOTAL_LEVELS} levels • ${set6CompletedCount}/${SET6_TOTAL_ITEMS} learned` : 'Complete Set 5 to unlock',
       icon: Languages,
       unlocked: set6Unlocked,
       complete: set6Complete,
@@ -232,7 +268,7 @@ export function LearnView({
       iconActiveCls: 'bg-white/20 text-white',
       iconInactiveCls: 'bg-gradient-to-br from-gold-500 to-primary-600 text-white',
     },
-  ];
+  ].filter((set) => availableSets.includes(set.id));
 
   return (
     <div className="screen-shell mx-auto max-w-4xl animate-fade-in px-4 pb-28 pt-6 md:pb-12 md:pt-24">
@@ -248,7 +284,7 @@ export function LearnView({
               key={s.id}
               onClick={() => handleSetClick(s.id)}
               disabled={!s.unlocked}
-              className={`screen-reveal flex items-center gap-3 rounded-[1.5rem] border p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] ${
+              className={`screen-reveal interactive-card flex items-center gap-3 rounded-[1.5rem] border p-4 text-left shadow-sm hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] ${
                 isOpen
                   ? `bg-gradient-to-br ${s.activeCls}`
                   : s.unlocked
@@ -267,7 +303,7 @@ export function LearnView({
                 <h3 className="font-bold leading-tight">{s.title}</h3>
                 <p
                   className={`text-xs ${
-                    isOpen ? 'text-white/70' : s.unlocked ? 'text-primary-500/70' : 'text-gray-400'
+                    isOpen ? 'text-white/70' : s.unlocked ? 'text-primary-700' : 'text-gray-400'
                   }`}
                 >
                   {s.subtitle}
@@ -316,7 +352,7 @@ export function LearnView({
                   ringColor="ring-primary-50"
                   unlockedBar="from-primary-500 to-teal-500"
                   hoverColor="hover:bg-primary-50/50"
-                  chevronColor="text-primary-400"
+                  chevronColor="text-primary-600"
                   onClick={() => handleLevelClick(level, unlocked)}
                 >
                   <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
@@ -341,11 +377,11 @@ export function LearnView({
                             {letter.index}
                           </span>
                           <div className="mt-3 flex h-16 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-teal-50 transition-transform group-hover:scale-105">
-                            <span className="font-arabic text-5xl font-bold text-primary-800">{letter.arabic}</span>
+                            <span className="font-arabic text-5xl font-bold text-primary-900">{letter.arabic}</span>
                           </div>
                           <p className="mt-2 font-malayalam text-sm font-semibold text-primary-700">{letter.malayalam}</p>
-                          <p className="text-xs font-medium text-primary-500/70">{letter.english}</p>
-                          <p className="mt-1.5 text-[10px] font-bold uppercase tracking-wide text-primary-400">
+                          <p className="text-xs font-medium text-primary-700">{letter.english}</p>
+                          <p className="mt-1.5 text-[10px] font-bold uppercase tracking-wide text-primary-600">
                             {isLearned ? 'Tap to undo' : 'Tap when learned'}
                           </p>
                         </button>
@@ -353,7 +389,7 @@ export function LearnView({
                     })}
                   </div>
                   {!allDone && (
-                    <p className="mt-3 text-center text-xs text-primary-500/70">
+                    <p className="mt-3 text-center text-xs text-primary-700">
                       Complete all 4 letters to unlock Level {level + 1 <= SET1_TOTAL_LEVELS ? level + 1 : '—'}
                     </p>
                   )}
@@ -370,11 +406,11 @@ export function LearnView({
           <SetSummaryHeader
             title={SET2_TITLE}
             subtitle={`${SET2_TOTAL_LEVELS} levels • vowel signs`}
-            count={`${harakatLearned.size}`}
+            count={`${set2CompletedCount}/${SET2_TOTAL_ITEMS}`}
             countLabel="Combos learned"
             gradient="from-gold-500 to-gold-700"
             barColor="from-white to-white"
-            pct={Math.min(100, (harakatLearned.size / SET2_TOTAL_ITEMS) * 100)}
+            pct={Math.min(100, (set2CompletedCount / SET2_TOTAL_ITEMS) * 100)}
             icon={<Sparkles size={24} />}
             barBg="bg-white/20"
           />
@@ -383,7 +419,7 @@ export function LearnView({
               const hi = HARAKAT[h];
               return (
                 <div key={h} className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-gold-100">
-                  <span className="font-arabic text-2xl font-bold text-primary-800">{hi.symbol}</span>
+                  <span className="font-arabic text-2xl font-bold text-primary-900">{hi.symbol}</span>
                   <span className="text-xs font-bold text-primary-700">{hi.name}</span>
                   <span className="font-malayalam text-xs text-gold-700">{hi.malayalam}</span>
                 </div>
@@ -432,17 +468,17 @@ export function LearnView({
                             </span>
                           )}
                           <div className="mt-2 flex h-16 items-center justify-center rounded-xl bg-gradient-to-br from-gold-50 to-primary-50 transition-transform group-hover:scale-105">
-                            <span className="font-arabic text-5xl font-bold text-primary-800">{applyHaraka(item.letter.arabic, item.haraka)}</span>
+                            <span className="font-arabic text-5xl font-bold text-primary-900">{applyHaraka(item.letter.arabic, item.haraka)}</span>
                           </div>
                           <p className="mt-2 text-xs font-bold text-primary-700">{hi.name}</p>
                           <p className="font-malayalam text-xs text-gold-700">{hi.malayalam}</p>
-                          <p className="mt-1 text-[10px] font-medium text-primary-500/60">{item.letter.english} + {hi.name}</p>
+                          <p className="mt-1 text-[10px] font-medium text-primary-700">{item.letter.english} + {hi.name}</p>
                           <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-gold-600">{isLearned ? 'Tap to undo' : 'Tap when learned'}</p>
                         </button>
                       );
                     })}
                   </div>
-                  <HarakatPractice level={lvl} harakatLearned={harakatLearned} onMark={onMarkHarakat} />
+                  <HarakatPractice level={lvl} onMark={onMarkHarakat} />
                   {!allDone && (
                     <p className="mt-3 text-center text-xs text-gold-700/70">
                       Complete all {lvl.items.length} combos to unlock Level {lvl.level + 1 <= SET2_TOTAL_LEVELS ? lvl.level + 1 : '—'}
@@ -451,6 +487,21 @@ export function LearnView({
                 </LevelCard>
               );
             })}
+          </div>
+
+          <div className="mt-4 rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-gold-100">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div>
+                <h4 className="text-base font-black text-primary-900">Letter Sound Practice</h4>
+                <p className="text-xs text-primary-700">
+                  {letterSoundPracticeCompletedCount}/{LETTER_SOUND_PRACTICE_ITEMS.length} sound cards practiced
+                </p>
+              </div>
+              <span className="rounded-full bg-gold-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-gold-700">
+                Class 2 only
+              </span>
+            </div>
+            <LetterSoundPractice onMark={onMarkLetterSoundPractice} />
           </div>
         </>
       )}
@@ -461,17 +512,17 @@ export function LearnView({
           <SetSummaryHeader
             title={SET4_TITLE}
             subtitle={`${SET4_TOTAL_LEVELS} levels • sukoon (ْ)`}
-            count={`${sukoonLearned.size}`}
+            count={`${set4CompletedCount}/${SET4_TOTAL_ITEMS}`}
             countLabel="Items learned"
             gradient="from-teal-600 to-teal-800"
             barColor="from-white to-white"
-            pct={Math.min(100, (sukoonLearned.size / SET4_TOTAL_ITEMS) * 100)}
+            pct={Math.min(100, (set4CompletedCount / SET4_TOTAL_ITEMS) * 100)}
             icon={<Moon size={24} />}
             barBg="bg-white/20"
           />
           <div className="mb-4 flex flex-wrap justify-center gap-2">
             <div className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-teal-100">
-              <span className="font-arabic text-2xl font-bold text-primary-800">{SUKOON_SYMBOL}</span>
+              <span className="font-arabic text-2xl font-bold text-primary-900">{SUKOON_SYMBOL}</span>
               <span className="text-xs font-bold text-primary-700">Sukoon</span>
               <span className="font-malayalam text-xs text-teal-700">സുകൂൻ</span>
             </div>
@@ -517,7 +568,7 @@ export function LearnView({
                             </span>
                           )}
                           <div className="mt-2 flex h-16 items-center justify-center rounded-xl bg-gradient-to-br from-teal-50 to-primary-50 transition-transform group-hover:scale-105">
-                            <span className="font-arabic text-5xl font-bold text-primary-800">{item.arabic}</span>
+                            <span className="font-arabic text-5xl font-bold text-primary-900">{item.arabic}</span>
                           </div>
                           <p className="mt-2 text-xs font-bold text-primary-700">{item.label}</p>
                           {item.malayalam && <p className="font-malayalam text-xs text-teal-700">{item.malayalam}</p>}
@@ -544,11 +595,11 @@ export function LearnView({
           <SetSummaryHeader
             title={SET5_TITLE}
             subtitle={`${SET5_TOTAL_LEVELS} levels • double vowels`}
-            count={`${tanweenLearned.size}`}
+            count={`${set5CompletedCount}/${SET5_TOTAL_ITEMS}`}
             countLabel="Items learned"
             gradient="from-primary-600 to-teal-700"
             barColor="from-white to-white"
-            pct={Math.min(100, (tanweenLearned.size / SET5_TOTAL_ITEMS) * 100)}
+            pct={Math.min(100, (set5CompletedCount / SET5_TOTAL_ITEMS) * 100)}
             icon={<Wind size={24} />}
             barBg="bg-white/20"
           />
@@ -557,7 +608,7 @@ export function LearnView({
               const ti = TANWEEN[t];
               return (
                 <div key={t} className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-primary-100">
-                  <span className="font-arabic text-2xl font-bold text-primary-800">{ti.symbol}</span>
+                  <span className="font-arabic text-2xl font-bold text-primary-900">{ti.symbol}</span>
                   <span className="text-xs font-bold text-primary-700">{ti.name}</span>
                   <span className="font-malayalam text-xs text-primary-600">{ti.malayalam}</span>
                 </div>
@@ -568,7 +619,8 @@ export function LearnView({
             {SET5_LEVELS.map((lvl) => {
               const unlocked = isSet5LevelUnlocked(lvl.level);
               const completed = set5LevelCompletedCount(lvl.level);
-              const allDone = completed === lvl.items.length;
+              const totalRequired = set5LevelRequiredCount(lvl.level);
+              const allDone = completed === totalRequired;
               const isOpen = openLevel === lvl.level && unlocked;
               return (
                 <LevelCard
@@ -583,7 +635,7 @@ export function LearnView({
                   ringColor="ring-primary-50"
                   unlockedBar="from-primary-400 to-teal-500"
                   hoverColor="hover:bg-primary-50/40"
-                  chevronColor="text-primary-400"
+                  chevronColor="text-primary-600"
                   barBg="bg-primary-100"
                   onClick={() => handleLevelClick(lvl.level, unlocked)}
                 >
@@ -606,12 +658,12 @@ export function LearnView({
                             </span>
                           )}
                           <div className="mt-2 flex h-16 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-teal-50 transition-transform group-hover:scale-105">
-                            <span className="font-arabic text-5xl font-bold text-primary-800">{applyTanween(item.letter.arabic, item.tanween)}</span>
+                            <span className="font-arabic text-5xl font-bold text-primary-900">{applyTanween(item.letter.arabic, item.tanween)}</span>
                           </div>
                           <p className="mt-2 text-xs font-bold text-primary-700">{ti.name}</p>
                           <p className="font-malayalam text-xs text-primary-600">{ti.malayalam}</p>
-                          <p className="mt-1 text-[10px] font-medium text-primary-500/60">{item.letter.english} + {ti.name}</p>
-                          <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-primary-500">{isLearned ? 'Tap to undo' : 'Tap when learned'}</p>
+                          <p className="mt-1 text-[10px] font-medium text-primary-700">{item.letter.english} + {ti.name}</p>
+                          <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-primary-700">{isLearned ? 'Tap to undo' : 'Tap when learned'}</p>
                         </button>
                       );
                     })}
@@ -620,7 +672,7 @@ export function LearnView({
                   {/* Reading items for level 5 */}
                   {lvl.readingItems && lvl.readingItems.length > 0 && (
                     <div className="mt-3 border-t border-primary-50 pt-3">
-                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-primary-500">Reading Practice</p>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-primary-700">Reading Practice</p>
                       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                         {lvl.readingItems.map((item, i) => {
                           const key = `s5-read-${lvl.level}-${i}`;
@@ -639,11 +691,11 @@ export function LearnView({
                                 </span>
                               )}
                               <div className="mt-2 flex h-16 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-teal-50 transition-transform group-hover:scale-105">
-                                <span className="font-arabic text-4xl font-bold text-primary-800">{item.arabic}</span>
+                                <span className="font-arabic text-4xl font-bold text-primary-900">{item.arabic}</span>
                               </div>
                               <p className="mt-2 text-xs font-bold text-primary-700">{item.label}</p>
                               <p className="font-malayalam text-xs text-primary-600">{item.malayalam}</p>
-                              <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-primary-500">{isLearned ? 'Tap to undo' : 'Tap when learned'}</p>
+                              <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-primary-700">{isLearned ? 'Tap to undo' : 'Tap when learned'}</p>
                             </button>
                           );
                         })}
@@ -652,8 +704,8 @@ export function LearnView({
                   )}
 
                   {!allDone && (
-                    <p className="mt-3 text-center text-xs text-primary-500/70">
-                      Complete all {lvl.items.length} items to unlock Level {lvl.level + 1 <= SET5_TOTAL_LEVELS ? lvl.level + 1 : '—'}
+                    <p className="mt-3 text-center text-xs text-primary-700">
+                      Complete all {totalRequired} required items to unlock Level {lvl.level + 1 <= SET5_TOTAL_LEVELS ? lvl.level + 1 : '—'}
                     </p>
                   )}
                 </LevelCard>
@@ -669,11 +721,11 @@ export function LearnView({
           <SetSummaryHeader
             title={SET6_TITLE}
             subtitle={`${SET6_TOTAL_LEVELS} levels • words & fun activities`}
-            count={`${wordsLearned.size}`}
-            countLabel="Items learned"
+            count={`${set6CompletedCount}/${SET6_TOTAL_ITEMS}`}
+            countLabel="Levels completed"
             gradient="from-gold-600 to-primary-800"
             barColor="from-white to-white"
-            pct={Math.min(100, (wordsLearned.size / (SET6_TOTAL_ITEMS + 6)) * 100)}
+            pct={Math.min(100, (set6CompletedCount / SET6_TOTAL_ITEMS) * 100)}
             icon={<Languages size={24} />}
             barBg="bg-white/20"
           />
@@ -703,7 +755,7 @@ export function LearnView({
                   onClick={() => handleLevelClick(lvl.level, unlocked)}
                 >
                   {lvl.level === 1 && (
-                    <WordLearnLevel wordsLearned={wordsLearned} onToggle={onToggleWord} />
+                    <WordLearnLevel wordsLearned={wordsLearned} onToggle={onToggleWord} onMark={onMarkWord} />
                   )}
                   {lvl.level === 2 && (
                     <WordMatchingLevel matchLang="malayalam" wordsLearned={wordsLearned} onComplete={onMarkWord} />
@@ -763,7 +815,7 @@ export function LearnView({
         onClick={() => {
           if (confirm('Reset all learning progress? All levels and sets will lock again.')) onResetLearning();
         }}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-red-100 bg-[#fffdf8] px-4 py-3 font-bold text-red-500 shadow-sm transition-all hover:bg-red-50 hover:shadow-md active:scale-95"
+        className="interactive-card mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-red-100 bg-[#fffdf8] px-4 py-3 font-bold text-red-500 shadow-sm hover:bg-red-50 hover:shadow-md active:scale-95"
       >
         <RotateCcw size={18} /> Reset Learning Progress
       </button>
@@ -869,7 +921,7 @@ function LevelCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h4 className="font-bold text-primary-900">{title}</h4>
-            {subtitle && <span className="truncate text-xs font-semibold text-primary-500/70">{subtitle}</span>}
+            {subtitle && <span className="truncate text-xs font-semibold text-primary-700">{subtitle}</span>}
             {allDone && (
               <span className="flex items-center gap-0.5 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-600">
                 <Star size={10} className="fill-green-500 text-green-500" /> Complete

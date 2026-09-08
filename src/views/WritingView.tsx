@@ -15,15 +15,22 @@ interface Props {
   onHome: () => void;
   startLetter: number; // 1-based
   onProgress: (completedCount: number, unlockedIndex: number) => void;
+  selectedClass: 1 | 2 | 3;
 }
 
 const STROKE_COLOR = '#0b6453';
 const STROKE_WIDTH = 9;
 const GUIDE_OPACITY = 0.22;
 const COMPLETION_THRESHOLD = 0.60;
+const LETTER_LIMITS: Record<1 | 2 | 3, number> = {
+  1: TOTAL_LETTERS,
+  2: 16,
+  3: TOTAL_LETTERS,
+};
 
-export function WritingView({ onHome, startLetter, onProgress }: Props) {
-  const [letterIdx, setLetterIdx] = useState(() => Math.max(0, Math.min(TOTAL_LETTERS - 1, startLetter - 1)));
+export function WritingView({ onHome, startLetter, onProgress, selectedClass }: Props) {
+  const maxLetters = LETTER_LIMITS[selectedClass];
+  const [letterIdx, setLetterIdx] = useState(() => Math.max(0, Math.min(maxLetters - 1, startLetter - 1)));
   const [completed, setCompleted] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -45,18 +52,18 @@ export function WritingView({ onHome, startLetter, onProgress }: Props) {
   const validatingRef = useRef(false);
 
   const completedCount = useMemo(() => {
-    if (allDone) return TOTAL_LETTERS;
+    if (allDone) return maxLetters;
     return letterIdx + (completed ? 1 : 0);
-  }, [letterIdx, completed, allDone]);
+  }, [letterIdx, completed, allDone, maxLetters]);
 
   // Notify parent of progress
   useEffect(() => {
     if (allDone) {
-      onProgress(TOTAL_LETTERS, TOTAL_LETTERS);
+      onProgress(maxLetters, maxLetters);
     } else {
-      onProgress(completedCount, Math.min(TOTAL_LETTERS, letterIdx + (completed ? 2 : 1)));
+      onProgress(completedCount, Math.min(maxLetters, letterIdx + (completed ? 2 : 1)));
     }
-  }, [completedCount, letterIdx, completed, allDone, onProgress]);
+  }, [completedCount, letterIdx, completed, allDone, maxLetters, onProgress]);
 
   // Resize handling — rebuild canvases when container size changes
   useEffect(() => {
@@ -260,13 +267,12 @@ export function WritingView({ onHome, startLetter, onProgress }: Props) {
     [getPoint, updateLiveProgress],
   );
 
-  const endStroke = useCallback(() => {
-    if (!drawingRef.current) return;
-    drawingRef.current = false;
-    lastPtRef.current = null;
-    updateLiveProgress();
-    tryValidate();
-  }, [updateLiveProgress]);
+  const handleSuccess = useCallback(() => {
+    setCompleted(true);
+    setShowSuccess(true);
+    setFeedback(null);
+    setTraceProgress(100);
+  }, []);
 
   const tryValidate = useCallback(() => {
     if (validatingRef.current || completed || allDone) return;
@@ -286,14 +292,15 @@ export function WritingView({ onHome, startLetter, onProgress }: Props) {
         setFeedback('Keep tracing the letter');
       }
     });
-  }, [completed, allDone]);
+  }, [allDone, completed, handleSuccess]);
 
-  const handleSuccess = useCallback(() => {
-    setCompleted(true);
-    setShowSuccess(true);
-    setFeedback(null);
-    setTraceProgress(100);
-  }, []);
+  const endStroke = useCallback(() => {
+    if (!drawingRef.current) return;
+    drawingRef.current = false;
+    lastPtRef.current = null;
+    updateLiveProgress();
+    tryValidate();
+  }, [tryValidate, updateLiveProgress]);
 
   const handleReset = useCallback(() => {
     if (completed) return;
@@ -321,7 +328,7 @@ export function WritingView({ onHome, startLetter, onProgress }: Props) {
     pointsRef.current = [];
     lastPtRef.current = null;
 
-    if (letterIdx + 1 >= TOTAL_LETTERS) {
+    if (letterIdx + 1 >= maxLetters) {
       setAllDone(true);
       setShowSuccess(false);
       setCompleted(false);
@@ -346,7 +353,7 @@ export function WritingView({ onHome, startLetter, onProgress }: Props) {
       drawGuide(ARABIC_LETTERS[nextIdx].arabic, w, h);
       if (guide) rebuildMask(guide, w, h);
     });
-  }, [completed, letterIdx, drawGuide, rebuildMask]);
+  }, [completed, drawGuide, letterIdx, maxLetters, rebuildMask]);
 
   const handleRestartLevel = useCallback(() => {
     setShowRestart(false);
@@ -390,11 +397,11 @@ export function WritingView({ onHome, startLetter, onProgress }: Props) {
           <h2 className="font-arabic text-3xl font-bold text-white">مبروك!</h2>
           <p className="mt-1 text-sm text-white/80">Congratulations!</p>
           <div className="mt-6 rounded-2xl bg-white/15 px-4 py-4 ring-1 ring-white/20">
-            <p className="text-3xl font-bold text-white">28/28</p>
+            <p className="text-3xl font-bold text-white">{maxLetters}/{maxLetters}</p>
             <p className="text-xs uppercase tracking-wide text-white/70">Letters Completed</p>
           </div>
           <p className="mt-4 text-sm font-semibold text-white/90">
-            You traced all 28 Arabic letters. MashaAllah!
+            You traced all {maxLetters} Arabic letters. MashaAllah!
           </p>
           <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
             <button
@@ -452,12 +459,12 @@ export function WritingView({ onHome, startLetter, onProgress }: Props) {
       {/* current letter info */}
       <div className="screen-panel relative z-10 mb-3 flex items-center justify-between rounded-[1.5rem] bg-[#fffdf8] p-3">
         <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-teal-50 font-arabic text-3xl font-bold text-primary-800">
+          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-teal-50 font-arabic text-3xl font-bold text-primary-900">
             {current.arabic}
           </span>
           <div className="leading-tight">
-            <p className="font-malayalam text-base font-semibold text-primary-800">{current.malayalam}</p>
-            <p className="text-xs font-medium text-primary-500/70">{current.english}</p>
+            <p className="font-malayalam text-base font-semibold text-primary-900">{current.malayalam}</p>
+            <p className="text-xs font-medium text-primary-700">{current.english}</p>
           </div>
         </div>
         {showSuccess ? (
@@ -465,7 +472,7 @@ export function WritingView({ onHome, startLetter, onProgress }: Props) {
             <Check size={14} strokeWidth={3} /> Traced!
           </span>
         ) : (
-          <span className="flex items-center gap-1 text-xs font-semibold text-primary-400">
+          <span className="flex items-center gap-1 text-xs font-semibold text-primary-600">
             <PenTool size={14} /> Trace it
           </span>
         )}
@@ -489,7 +496,7 @@ export function WritingView({ onHome, startLetter, onProgress }: Props) {
             style={{ width: `${traceProgress}%` }}
           />
         </div>
-        <p className="mt-1 text-[10px] text-primary-500/60">
+        <p className="mt-1 text-[10px] text-primary-700">
           Reach 60% to complete the letter, then press Next
         </p>
       </div>
@@ -533,14 +540,14 @@ export function WritingView({ onHome, startLetter, onProgress }: Props) {
         <button
           onClick={handleReset}
           disabled={completed}
-          className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 font-bold text-primary-700 shadow-sm ring-1 ring-primary-100 transition-all hover:bg-primary-50 active:scale-95 disabled:opacity-40"
+          className="interactive-card flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 font-bold text-primary-700 shadow-sm ring-1 ring-primary-100 hover:bg-primary-50 active:scale-95 disabled:opacity-40"
         >
           <RotateCcw size={18} /> Reset
         </button>
         <button
           onClick={handleNextManual}
           disabled={!completed}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-4 py-3 font-bold transition-all active:scale-95 ${
+          className={`interactive-card flex flex-1 items-center justify-center gap-2 rounded-2xl px-4 py-3 font-bold active:scale-95 ${
             completed
               ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md hover:shadow-lg'
               : 'cursor-not-allowed bg-gray-100 text-gray-400'
@@ -553,12 +560,12 @@ export function WritingView({ onHome, startLetter, onProgress }: Props) {
       {/* restart level */}
       <button
         onClick={() => setShowRestart(true)}
-        className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gold-50 px-4 py-2.5 text-sm font-bold text-gold-700 ring-1 ring-gold-200 transition-all hover:bg-gold-100 active:scale-95"
+        className="interactive-card mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gold-50 px-4 py-2.5 text-sm font-bold text-gold-700 ring-1 ring-gold-200 hover:bg-gold-100 active:scale-95"
       >
         <RefreshCw size={16} /> Restart from Beginning
       </button>
 
-      <p className="mt-3 text-center text-xs text-primary-500/60">
+      <p className="mt-3 text-center text-xs text-primary-700">
         Trace over the faded letter. Complete it to enable the Next button.
       </p>
 
@@ -571,8 +578,8 @@ export function WritingView({ onHome, startLetter, onProgress }: Props) {
                 <RefreshCw size={28} className="text-gold-600" />
               </span>
             </div>
-            <h3 className="text-center text-lg font-bold text-primary-800">Restart this practice from the beginning?</h3>
-            <p className="mt-2 text-center text-sm text-primary-600/70">
+            <h3 className="text-center text-lg font-bold text-primary-900">Restart this practice from the beginning?</h3>
+            <p className="mt-2 text-center text-sm text-primary-900">
               You will go back to the first letter and practice all letters again.
             </p>
             <div className="mt-5 flex gap-3">

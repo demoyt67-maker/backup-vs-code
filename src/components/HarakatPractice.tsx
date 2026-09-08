@@ -10,7 +10,6 @@ import {
 
 interface Props {
   level: HarakatLevel;
-  harakatLearned: Set<string>;
   onMark: (key: string) => void;
 }
 
@@ -41,7 +40,7 @@ function buildQuestion(level: HarakatLevel): Question {
   return { promptHaraka, baseLetter, options, key };
 }
 
-export function HarakatPractice({ level, harakatLearned, onMark }: Props) {
+export function HarakatPractice({ level, onMark }: Props) {
   const [question, setQuestion] = useState<Question>(() => buildQuestion(level));
   const [selected, setSelected] = useState<HarakaType | null>(null);
   const [answered, setAnswered] = useState(false);
@@ -80,7 +79,7 @@ export function HarakatPractice({ level, harakatLearned, onMark }: Props) {
   return (
     <div className="mt-4 rounded-2xl bg-gradient-to-br from-teal-50 to-primary-50 p-4 ring-1 ring-primary-100">
       <div className="mb-3 flex items-center justify-between">
-        <h5 className="text-sm font-bold text-primary-800">Practice</h5>
+        <h5 className="text-sm font-bold text-primary-900">Practice</h5>
         <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-primary-700 shadow-sm">
           {score} correct
         </span>
@@ -88,13 +87,13 @@ export function HarakatPractice({ level, harakatLearned, onMark }: Props) {
 
       {/* Prompt */}
       <div className="rounded-xl bg-white p-4 text-center shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary-500/70">
+        <p className="text-xs font-semibold uppercase tracking-wide text-primary-700">
           Which haraka is on this letter?
         </p>
-        <p className="mt-2 font-arabic text-6xl font-bold text-primary-800">
+        <p className="mt-2 font-arabic text-6xl font-bold text-primary-900">
           {applyHaraka(question.baseLetter, question.promptHaraka)}
         </p>
-        <p className="mt-2 text-xs text-primary-500/70">
+        <p className="mt-2 text-xs text-primary-700">
           Base letter: <span className="font-arabic text-lg font-bold text-primary-700">{question.baseLetter}</span>
         </p>
       </div>
@@ -172,7 +171,7 @@ export function HarakatPractice({ level, harakatLearned, onMark }: Props) {
       </div>
 
       {attempts > 0 && (
-        <p className="mt-2 text-center text-xs text-primary-500/70">
+        <p className="mt-2 text-center text-xs text-primary-700">
           {score} / {attempts} correct so far
         </p>
       )}

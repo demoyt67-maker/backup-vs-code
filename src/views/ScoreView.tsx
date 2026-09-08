@@ -93,9 +93,9 @@ export function ScoreView({ onHome, score, onReset }: Props) {
         </span>
         <div className="flex-1">
           <h3 className="font-bold text-primary-900">Letters Available</h3>
-          <p className="text-xs text-primary-600/70">{TOTAL_LETTERS} Arabic letters to learn</p>
+          <p className="text-xs text-primary-900">{TOTAL_LETTERS} Arabic letters to learn</p>
         </div>
-        <Percent size={20} className="text-primary-400" />
+        <Percent size={20} className="text-primary-600" />
       </div>
 
       {/* actions */}

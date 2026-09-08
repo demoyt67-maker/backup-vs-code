@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { TOTAL_LETTERS } from '@/data/letters';
+import type { ClassLevel } from '@/App';
 
 export interface ScoreData {
   bestQuizScore: number;
@@ -10,7 +11,9 @@ export interface ScoreData {
   writingUnlocked: number; // index (1-based) of next letter to trace
 }
 
-const STORAGE_KEY = 'madrasa-arabic-quiz-progress';
+function storageKey(selectedClass: ClassLevel) {
+  return `madrasa-arabic-quiz-progress-class-${selectedClass}`;
+}
 
 const DEFAULT_DATA: ScoreData = {
   bestQuizScore: 0,
@@ -21,9 +24,9 @@ const DEFAULT_DATA: ScoreData = {
   writingUnlocked: 1,
 };
 
-function load(): ScoreData {
+function load(selectedClass: ClassLevel): ScoreData {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey(selectedClass));
     if (!raw) return DEFAULT_DATA;
     const parsed = JSON.parse(raw) as Partial<ScoreData>;
     return { ...DEFAULT_DATA, ...parsed, quizTotal: TOTAL_LETTERS };
@@ -32,45 +35,63 @@ function load(): ScoreData {
   }
 }
 
-function save(data: ScoreData) {
+function save(selectedClass: ClassLevel, data: ScoreData) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(storageKey(selectedClass), JSON.stringify(data));
   } catch {
     // ignore
   }
 }
 
-export function useScoreStore() {
-  const [data, setData] = useState<ScoreData>(() => load());
+export function useScoreStore(selectedClass: ClassLevel) {
+  const [data, setData] = useState<ScoreData>(() => load(selectedClass));
 
   useEffect(() => {
-    save(data);
-  }, [data]);
+    setData(load(selectedClass));
+  }, [selectedClass]);
+
+  useEffect(() => {
+    save(selectedClass, data);
+  }, [data, selectedClass]);
 
   const recordQuizResult = useCallback((score: number) => {
-    setData((prev) => ({
-      ...prev,
-      lastQuizScore: score,
-      bestQuizScore: Math.max(prev.bestQuizScore, score),
-      quizCompletion: 1,
-    }));
-  }, []);
+    setData((prev) => {
+      const next = {
+        ...prev,
+        lastQuizScore: score,
+        bestQuizScore: Math.max(prev.bestQuizScore, score),
+        quizCompletion: 1,
+      };
+      save(selectedClass, next);
+      return next;
+    });
+  }, [selectedClass]);
 
   const recordWritingProgress = useCallback((completedCount: number, unlockedIndex: number) => {
-    setData((prev) => ({
-      ...prev,
-      writingCompleted: Math.max(prev.writingCompleted, completedCount),
-      writingUnlocked: unlockedIndex,
-    }));
-  }, []);
+    setData((prev) => {
+      const next = {
+        ...prev,
+        writingCompleted: Math.max(prev.writingCompleted, completedCount),
+        writingUnlocked: unlockedIndex,
+      };
+      save(selectedClass, next);
+      return next;
+    });
+  }, [selectedClass]);
 
   const resetWriting = useCallback(() => {
-    setData((prev) => ({ ...prev, writingCompleted: 0, writingUnlocked: 1 }));
-  }, []);
+    setData((prev) => {
+      const next = { ...prev, writingCompleted: 0, writingUnlocked: 1 };
+      save(selectedClass, next);
+      return next;
+    });
+  }, [selectedClass]);
 
   const resetAll = useCallback(() => {
-    setData(DEFAULT_DATA);
-  }, []);
+    const next = DEFAULT_DATA;
+    setData(next);
+    save(selectedClass, next);
+  }, [selectedClass]);
 
   return { data, recordQuizResult, recordWritingProgress, resetWriting, resetAll };
 }

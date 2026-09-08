@@ -6,6 +6,8 @@ import { BackHeader } from '@/components/BackHeader';
 interface Props {
   onHome: () => void;
   onFinish: (score: number) => void;
+  selectedClass: 1 | 2 | 3;
+  learned?: Set<number>;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -17,19 +19,26 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function buildChoices(correct: ArabicLetter): ArabicLetter[] {
-  const others = ARABIC_LETTERS.filter((l) => l.arabic !== correct.arabic);
+function buildChoices(correct: ArabicLetter, pool: ArabicLetter[]): ArabicLetter[] {
+  const others = pool.filter((l) => l.arabic !== correct.arabic);
   const distractors = shuffle(others).slice(0, 3);
   return shuffle([correct, ...distractors]);
 }
 
-export function QuizView({ onHome, onFinish }: Props) {
-  const questions = useMemo(() => shuffle(ARABIC_LETTERS), []);
+const QUESTION_LIMITS: Record<1 | 2 | 3, number> = {
+  1: TOTAL_LETTERS,
+  2: 16,
+  3: TOTAL_LETTERS,
+};
+
+export function QuizView({ onHome, onFinish, selectedClass }: Props) {
+  const questionPool = useMemo(() => ARABIC_LETTERS.slice(0, QUESTION_LIMITS[selectedClass]), [selectedClass]);
+  const questions = useMemo(() => shuffle(questionPool), [questionPool]);
   const [qIndex, setQIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
-  const [choices, setChoices] = useState<ArabicLetter[]>(() => buildChoices(questions[0]));
+  const [choices, setChoices] = useState<ArabicLetter[]>(() => buildChoices(questions[0], questionPool));
   const [finished, setFinished] = useState(false);
 
   const current = questions[qIndex];
@@ -49,7 +58,7 @@ export function QuizView({ onHome, onFinish }: Props) {
 
   const handleNext = useCallback(() => {
     if (!answered) return;
-    if (qIndex + 1 >= TOTAL_LETTERS) {
+    if (qIndex + 1 >= questions.length) {
       const finalScore = score;
       setFinished(true);
       onFinish(finalScore);
@@ -57,22 +66,22 @@ export function QuizView({ onHome, onFinish }: Props) {
     }
     const next = qIndex + 1;
     setQIndex(next);
-    setChoices(buildChoices(questions[next]));
+    setChoices(buildChoices(questions[next], questionPool));
     setAnswered(false);
     setSelected(null);
-  }, [answered, qIndex, questions, score, onFinish]);
+  }, [answered, qIndex, questions, questionPool, score, onFinish]);
 
   const handleRetry = useCallback(() => {
     setQIndex(0);
     setScore(0);
     setAnswered(false);
     setSelected(null);
-    setChoices(buildChoices(questions[0]));
+    setChoices(buildChoices(questions[0], questionPool));
     setFinished(false);
-  }, [questions]);
+  }, [questionPool, questions]);
 
   if (finished) {
-    const pct = Math.round((score / TOTAL_LETTERS) * 100);
+    const pct = Math.round((score / questions.length) * 100);
     const message =
       pct >= 90
         ? 'MashaAllah! Excellent work!'
@@ -94,7 +103,7 @@ export function QuizView({ onHome, onFinish }: Props) {
 
           <div className="mt-6 grid grid-cols-3 gap-3">
             <Stat label="Score" value={`${score}`} />
-            <Stat label="Correct" value={`${score}/${TOTAL_LETTERS}`} />
+            <Stat label="Correct" value={`${score}/${questions.length}`} />
             <Stat label="Percentage" value={`${pct}%`} />
           </div>
 
@@ -105,13 +114,13 @@ export function QuizView({ onHome, onFinish }: Props) {
           <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
             <button
               onClick={handleRetry}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 font-bold text-primary-700 shadow-md transition-all hover:shadow-lg active:scale-95"
+              className="interactive-card flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 font-bold text-primary-700 shadow-md hover:shadow-lg active:scale-95"
             >
               <RotateCcw size={18} /> Retry Quiz
             </button>
             <button
               onClick={onHome}
-              className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white/15 px-4 py-3 font-bold text-white ring-1 ring-white/20 transition-all hover:bg-white/25 active:scale-95"
+              className="interactive-card flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white/15 px-4 py-3 font-bold text-white ring-1 ring-white/20 hover:bg-white/25 active:scale-95"
             >
               <Home size={18} /> Home
             </button>
@@ -123,13 +132,13 @@ export function QuizView({ onHome, onFinish }: Props) {
 
   return (
     <div className="screen-shell mx-auto max-w-2xl animate-fade-in px-4 pb-28 pt-6 md:pb-12 md:pt-24">
-      <BackHeader title="Arabic Quiz" onBack={onHome} subtitle={`Question ${qIndex + 1} of ${TOTAL_LETTERS}`} />
+      <BackHeader title="Arabic Quiz" onBack={onHome} subtitle={`Question ${qIndex + 1} of ${questions.length}`} />
 
       {/* progress bar */}
       <div className="mb-5 h-2 w-full overflow-hidden rounded-full bg-primary-100">
         <div
           className="h-full rounded-full bg-gradient-to-r from-primary-500 to-teal-500 transition-all duration-300"
-          style={{ width: `${((qIndex + (answered ? 1 : 0)) / TOTAL_LETTERS) * 100}%` }}
+          style={{ width: `${((qIndex + (answered ? 1 : 0)) / questions.length) * 100}%` }}
         />
       </div>
 
@@ -139,22 +148,22 @@ export function QuizView({ onHome, onFinish }: Props) {
           Score: {score}
         </span>
         <span className="rounded-full bg-gold-50 px-3 py-1 text-xs font-bold text-gold-700">
-          {qIndex + 1} / {TOTAL_LETTERS}
+          {qIndex + 1} / {questions.length}
         </span>
       </div>
 
       {/* question card */}
       <div className="screen-panel relative z-10 rounded-[2rem] bg-[#fffdf8] p-5 md:p-8">
-        <p className="text-center text-xs font-semibold uppercase tracking-wide text-primary-500/60">
+        <p className="text-center text-xs font-semibold uppercase tracking-wide text-primary-700">
           Identify this letter
         </p>
 
         <div className="mt-4 rounded-[1.5rem] border border-primary-100/70 bg-gradient-to-br from-[#eef9f4] to-[#e7f7f2] p-5 text-center shadow-inner">
-          <p className="font-malayalam text-3xl font-bold text-primary-800">{current.malayalam}</p>
+          <p className="font-malayalam text-3xl font-bold text-primary-900">{current.malayalam}</p>
           <p className="mt-1 text-lg font-semibold text-primary-600/80">{current.english}</p>
         </div>
 
-        <p className="mt-4 text-center font-malayalam text-sm font-medium text-primary-700/70">
+        <p className="mt-4 text-center font-malayalam text-sm font-medium text-primary-900">
           ശരിയായ ഉത്തരം തിരഞ്ഞെടുക്കുക
         </p>
 
@@ -175,7 +184,7 @@ export function QuizView({ onHome, onFinish }: Props) {
                 key={choice.arabic}
                 disabled={answered}
                 onClick={() => handleSelect(choice.arabic)}
-                className={`relative flex aspect-[4/3] items-center justify-center rounded-2xl font-arabic text-5xl font-bold transition-all md:text-6xl ${cls}`}
+                className={`interactive-card relative flex aspect-[4/3] items-center justify-center rounded-2xl font-arabic text-5xl font-bold md:text-6xl ${cls}`}
               >
                 {choice.arabic}
                 {answered && isCorrect && (
@@ -210,13 +219,13 @@ export function QuizView({ onHome, onFinish }: Props) {
         <button
           onClick={handleNext}
           disabled={!answered}
-          className={`mt-4 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 font-bold transition-all active:scale-95 ${
+          className={`interactive-card mt-4 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 font-bold active:scale-95 ${
             answered
               ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md hover:shadow-lg'
               : 'cursor-not-allowed bg-gray-100 text-gray-400'
           }`}
         >
-          {qIndex + 1 >= TOTAL_LETTERS ? (
+          {qIndex + 1 >= questions.length ? (
             <>
               See Results <Trophy size={18} />
             </>

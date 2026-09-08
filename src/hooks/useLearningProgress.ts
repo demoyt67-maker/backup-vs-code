@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ARABIC_LETTERS } from '@/data/letters';
+import type { ClassLevel } from '@/App';
+
+function storageKey(prefix: string, selectedClass: ClassLevel) {
+  return `${prefix}-class-${selectedClass}`;
+}
 
 // ---------- Set 1: letter learning ----------
-const LETTERS_KEY = 'madrasa-arabic-learn-progress';
 
 function loadSet<T>(key: string, validator: (v: unknown) => boolean): Set<T> {
   try {
@@ -27,29 +31,22 @@ const isLetterIndex = (v: unknown): v is number => typeof v === 'number' && v >=
 const isString = (v: unknown): v is string => typeof v === 'string';
 
 // ---------- Set 2: harakat learning ----------
-const HARAKAT_KEY = 'madrasa-arabic-harakat-progress';
+export function useLearningProgress(selectedClass: ClassLevel) {
+  const [learned, setLearned] = useState<Set<number>>(() => loadSet<number>(storageKey('madrasa-arabic-learn-progress', selectedClass), isLetterIndex));
+  const [harakatLearned, setHarakatLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-harakat-progress', selectedClass), isString));
+  const [letterSoundPracticeLearned, setLetterSoundPracticeLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-letter-sound-practice-progress', selectedClass), isString));
+  const [sukoonLearned, setSukoonLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-sukoon-progress', selectedClass), isString));
+  const [tanweenLearned, setTanweenLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-tanween-progress', selectedClass), isString));
+  const [wordsLearned, setWordsLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-words-progress', selectedClass), isString));
 
-// ---------- Set 4: sukoon learning ----------
-const SUKOON_KEY = 'madrasa-arabic-sukoon-progress';
-
-// ---------- Set 5: tanween learning ----------
-const TANWEEN_KEY = 'madrasa-arabic-tanween-progress';
-
-// ---------- Set 6: Arabic words learning ----------
-const WORDS_KEY = 'madrasa-arabic-words-progress';
-
-export function useLearningProgress() {
-  const [learned, setLearned] = useState<Set<number>>(() => loadSet<number>(LETTERS_KEY, isLetterIndex));
-  const [harakatLearned, setHarakatLearned] = useState<Set<string>>(() => loadSet<string>(HARAKAT_KEY, isString));
-  const [sukoonLearned, setSukoonLearned] = useState<Set<string>>(() => loadSet<string>(SUKOON_KEY, isString));
-  const [tanweenLearned, setTanweenLearned] = useState<Set<string>>(() => loadSet<string>(TANWEEN_KEY, isString));
-  const [wordsLearned, setWordsLearned] = useState<Set<string>>(() => loadSet<string>(WORDS_KEY, isString));
-
-  useEffect(() => saveSet(LETTERS_KEY, learned), [learned]);
-  useEffect(() => saveSet(HARAKAT_KEY, harakatLearned), [harakatLearned]);
-  useEffect(() => saveSet(SUKOON_KEY, sukoonLearned), [sukoonLearned]);
-  useEffect(() => saveSet(TANWEEN_KEY, tanweenLearned), [tanweenLearned]);
-  useEffect(() => saveSet(WORDS_KEY, wordsLearned), [wordsLearned]);
+  useEffect(() => {
+    setLearned(loadSet<number>(storageKey('madrasa-arabic-learn-progress', selectedClass), isLetterIndex));
+    setHarakatLearned(loadSet<string>(storageKey('madrasa-arabic-harakat-progress', selectedClass), isString));
+    setLetterSoundPracticeLearned(loadSet<string>(storageKey('madrasa-arabic-letter-sound-practice-progress', selectedClass), isString));
+    setSukoonLearned(loadSet<string>(storageKey('madrasa-arabic-sukoon-progress', selectedClass), isString));
+    setTanweenLearned(loadSet<string>(storageKey('madrasa-arabic-tanween-progress', selectedClass), isString));
+    setWordsLearned(loadSet<string>(storageKey('madrasa-arabic-words-progress', selectedClass), isString));
+  }, [selectedClass]);
 
   // --- Set 1 letter ops ---
   const toggleLetter = useCallback((letterIndex: number) => {
@@ -57,18 +54,20 @@ export function useLearningProgress() {
       const next = new Set(prev);
       if (next.has(letterIndex)) next.delete(letterIndex);
       else next.add(letterIndex);
+      saveSet(storageKey('madrasa-arabic-learn-progress', selectedClass), next);
       return next;
     });
-  }, []);
+  }, [selectedClass]);
 
   const markLetter = useCallback((letterIndex: number) => {
     setLearned((prev) => {
       if (prev.has(letterIndex)) return prev;
       const next = new Set(prev);
       next.add(letterIndex);
+      saveSet(storageKey('madrasa-arabic-learn-progress', selectedClass), next);
       return next;
     });
-  }, []);
+  }, [selectedClass]);
 
   // --- Set 2 harakat ops ---
   const toggleHarakat = useCallback((key: string) => {
@@ -76,18 +75,31 @@ export function useLearningProgress() {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
+      saveSet(storageKey('madrasa-arabic-harakat-progress', selectedClass), next);
       return next;
     });
-  }, []);
+  }, [selectedClass]);
 
   const markHarakat = useCallback((key: string) => {
     setHarakatLearned((prev) => {
       if (prev.has(key)) return prev;
       const next = new Set(prev);
       next.add(key);
+      saveSet(storageKey('madrasa-arabic-harakat-progress', selectedClass), next);
       return next;
     });
-  }, []);
+  }, [selectedClass]);
+
+  // --- Set 2 letter sound practice ops ---
+  const markLetterSoundPractice = useCallback((key: string) => {
+    setLetterSoundPracticeLearned((prev) => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      saveSet(storageKey('madrasa-arabic-letter-sound-practice-progress', selectedClass), next);
+      return next;
+    });
+  }, [selectedClass]);
 
   // --- Set 4 sukoon ops ---
   const toggleSukoon = useCallback((key: string) => {
@@ -95,18 +107,20 @@ export function useLearningProgress() {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
+      saveSet(storageKey('madrasa-arabic-sukoon-progress', selectedClass), next);
       return next;
     });
-  }, []);
+  }, [selectedClass]);
 
   const markSukoon = useCallback((key: string) => {
     setSukoonLearned((prev) => {
       if (prev.has(key)) return prev;
       const next = new Set(prev);
       next.add(key);
+      saveSet(storageKey('madrasa-arabic-sukoon-progress', selectedClass), next);
       return next;
     });
-  }, []);
+  }, [selectedClass]);
 
   // --- Set 5 tanween ops ---
   const toggleTanween = useCallback((key: string) => {
@@ -114,18 +128,20 @@ export function useLearningProgress() {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
+      saveSet(storageKey('madrasa-arabic-tanween-progress', selectedClass), next);
       return next;
     });
-  }, []);
+  }, [selectedClass]);
 
   const markTanween = useCallback((key: string) => {
     setTanweenLearned((prev) => {
       if (prev.has(key)) return prev;
       const next = new Set(prev);
       next.add(key);
+      saveSet(storageKey('madrasa-arabic-tanween-progress', selectedClass), next);
       return next;
     });
-  }, []);
+  }, [selectedClass]);
 
   // --- Set 6 word ops ---
   const toggleWord = useCallback((key: string) => {
@@ -133,27 +149,37 @@ export function useLearningProgress() {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
+      saveSet(storageKey('madrasa-arabic-words-progress', selectedClass), next);
       return next;
     });
-  }, []);
+  }, [selectedClass]);
 
   const markWord = useCallback((key: string) => {
     setWordsLearned((prev) => {
       if (prev.has(key)) return prev;
       const next = new Set(prev);
       next.add(key);
+      saveSet(storageKey('madrasa-arabic-words-progress', selectedClass), next);
       return next;
     });
-  }, []);
+  }, [selectedClass]);
 
   // --- Reset ---
   const resetLearning = useCallback(() => {
-    setLearned(new Set());
+    const empty = new Set<number>();
+    setLearned(empty);
     setHarakatLearned(new Set());
+    setLetterSoundPracticeLearned(new Set());
     setSukoonLearned(new Set());
     setTanweenLearned(new Set());
     setWordsLearned(new Set());
-  }, []);
+    saveSet(storageKey('madrasa-arabic-learn-progress', selectedClass), empty);
+    saveSet(storageKey('madrasa-arabic-harakat-progress', selectedClass), new Set());
+    saveSet(storageKey('madrasa-arabic-letter-sound-practice-progress', selectedClass), new Set());
+    saveSet(storageKey('madrasa-arabic-sukoon-progress', selectedClass), new Set());
+    saveSet(storageKey('madrasa-arabic-tanween-progress', selectedClass), new Set());
+    saveSet(storageKey('madrasa-arabic-words-progress', selectedClass), new Set());
+  }, [selectedClass]);
 
   return {
     learned,
@@ -162,6 +188,8 @@ export function useLearningProgress() {
     harakatLearned,
     toggleHarakat,
     markHarakat,
+    letterSoundPracticeLearned,
+    markLetterSoundPractice,
     sukoonLearned,
     toggleSukoon,
     markSukoon,

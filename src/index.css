@@ -1,0 +1,188 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: #f3f9f6;
+  color: #0b4239;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+}
+
+/* Prevent text selection on touch for all interactive elements */
+button,
+nav,
+header,
+[role=\"button\"] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.font-arabic {
+  font-family: 'Amiri', 'Scheherazade New', serif;
+}
+.font-malayalam {
+  font-family: 'Noto Sans Malayalam', sans-serif;
+}
+
+.screen-shell {
+  position: relative;
+}
+
+.screen-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0.5rem 0.25rem auto;
+  height: 16rem;
+  pointer-events: none;
+  border-radius: 2rem;
+  background: linear-gradient(125deg, rgba(217, 169, 58, 0.06), transparent 45%, rgba(13, 124, 102, 0.05));
+}
+
+.screen-panel {
+  border: 1px solid rgba(217, 169, 58, 0.16);
+  box-shadow: 0 14px 34px rgba(11, 66, 57, 0.07);
+}
+
+.screen-panel-dark {
+  box-shadow: 0 18px 38px rgba(4, 37, 31, 0.16);
+}
+
+.screen-reveal {
+  animation: home-rise 0.5s both cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screen-reveal {
+    animation: none;
+  }
+}
+
+.home-shell {
+  position: relative;
+}
+
+.home-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0.75rem 0.5rem auto;
+  height: 22rem;
+  pointer-events: none;
+  background: linear-gradient(120deg, rgba(217, 169, 58, 0.08), transparent 42%, rgba(13, 124, 102, 0.07));
+  border-radius: 2rem;
+  filter: blur(1px);
+}
+
+.home-hero-lines {
+  background-image:
+    linear-gradient(135deg, transparent 0 48%, rgba(246, 217, 139, 0.11) 48.2% 48.5%, transparent 48.7%),
+    linear-gradient(45deg, transparent 0 48%, rgba(255, 255, 255, 0.06) 48.2% 48.5%, transparent 48.7%);
+  background-size: 5.5rem 5.5rem;
+  mask-image: linear-gradient(to right, black, transparent 88%);
+}
+
+.home-emblem {
+  animation: home-emblem-in 0.7s 0.18s both cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.home-reveal {
+  animation: home-rise 0.55s both cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes home-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes home-emblem-in {
+  from {
+    opacity: 0;
+    transform: scale(0.86) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-reveal,
+  .home-emblem {
+    animation: none;
+  }
+}
+
+/* Islamic pattern background — subtle repeating motif */
+.islamic-pattern {
+  background-color: #f3f9f6;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(13, 124, 102, 0.05) 0, rgba(13, 124, 102, 0.05) 2px, transparent 2px),
+    radial-gradient(circle at 0 0, rgba(217, 169, 58, 0.04) 0, rgba(217, 169, 58, 0.04) 1.5px, transparent 1.5px),
+    radial-gradient(circle at 100% 100%, rgba(13, 124, 102, 0.04) 0, rgba(13, 124, 102, 0.04) 1.5px, transparent 1.5px);
+  background-size: 28px 28px, 28px 28px, 28px 28px;
+  background-position: 0 0, 0 0, 0 0;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-dark {
+  background: rgba(11, 66, 57, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(13, 124, 102, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Prevent text selection on buttons */
+button {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Canvas no select / no touch callout */
+canvas {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}

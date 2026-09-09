@@ -153,7 +153,7 @@ export function QuizView({ onHome, onFinish, selectedClass }: Props) {
       </div>
 
       {/* question card */}
-      <div className="screen-panel relative z-10 rounded-[2rem] bg-[#fffdf8] p-5 md:p-8">
+      <div className="screen-panel liquid-panel relative z-10 rounded-[2rem] bg-[#fffdf8] p-5 md:p-8">
         <p className="text-center text-xs font-semibold uppercase tracking-wide text-primary-700">
           Identify this letter
         </p>

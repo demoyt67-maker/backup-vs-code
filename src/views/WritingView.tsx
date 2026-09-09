@@ -457,7 +457,7 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
       </div>
 
       {/* current letter info */}
-      <div className="screen-panel relative z-10 mb-3 flex items-center justify-between rounded-[1.5rem] bg-[#fffdf8] p-3">
+      <div className="screen-panel liquid-panel relative z-10 mb-3 flex items-center justify-between rounded-[1.5rem] bg-[#fffdf8] p-3">
         <div className="flex items-center gap-3">
           <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-teal-50 font-arabic text-3xl font-bold text-primary-900">
             {current.arabic}
@@ -479,7 +479,7 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
       </div>
 
       {/* live tracing progress */}
-      <div className="screen-panel relative z-10 mb-3 rounded-[1.5rem] bg-[#fffdf8] p-3">
+      <div className="screen-panel liquid-panel relative z-10 mb-3 rounded-[1.5rem] bg-[#fffdf8] p-3">
         <div className="mb-1.5 flex items-center justify-between">
           <span className="text-xs font-bold text-primary-700">Tracing Progress</span>
           <span className={`text-sm font-bold ${traceProgress >= COMPLETION_THRESHOLD * 100 ? 'text-green-600' : 'text-primary-600'}`}>
@@ -505,7 +505,7 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
       <div
         ref={containerRef}
         data-no-scroll
-        className="relative aspect-square w-full overflow-hidden rounded-[2rem] border border-[#d9e8df] bg-[#fffdf8] shadow-2xl shadow-primary-900/10"
+        className="liquid-panel relative aspect-square w-full overflow-hidden rounded-[2rem] border border-[#d9e8df] bg-[#fffdf8] shadow-2xl shadow-primary-900/10"
         style={{ touchAction: 'none' }}
       >
         <canvas ref={guideCanvasRef} className="absolute inset-0 h-full w-full" />
@@ -540,14 +540,14 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
         <button
           onClick={handleReset}
           disabled={completed}
-          className="interactive-card flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 font-bold text-primary-700 shadow-sm ring-1 ring-primary-100 hover:bg-primary-50 active:scale-95 disabled:opacity-40"
+          className="liquid-button interactive-card flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 font-bold text-primary-700 shadow-sm ring-1 ring-primary-100 hover:bg-primary-50 active:scale-95 disabled:opacity-40"
         >
           <RotateCcw size={18} /> Reset
         </button>
         <button
           onClick={handleNextManual}
           disabled={!completed}
-          className={`interactive-card flex flex-1 items-center justify-center gap-2 rounded-2xl px-4 py-3 font-bold active:scale-95 ${
+          className={`liquid-button-primary interactive-card flex flex-1 items-center justify-center gap-2 rounded-2xl px-4 py-3 font-bold active:scale-95 ${
             completed
               ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md hover:shadow-lg'
               : 'cursor-not-allowed bg-gray-100 text-gray-400'
@@ -560,7 +560,7 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
       {/* restart level */}
       <button
         onClick={() => setShowRestart(true)}
-        className="interactive-card mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gold-50 px-4 py-2.5 text-sm font-bold text-gold-700 ring-1 ring-gold-200 hover:bg-gold-100 active:scale-95"
+        className="liquid-button interactive-card mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gold-50 px-4 py-2.5 text-sm font-bold text-gold-700 ring-1 ring-gold-200 hover:bg-gold-100 active:scale-95"
       >
         <RefreshCw size={16} /> Restart from Beginning
       </button>
@@ -572,7 +572,7 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
       {/* restart confirmation dialog */}
       {showRestart && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 animate-fade-in">
-          <div className="w-full max-w-sm rounded-[2rem] border border-[#e4dcc9] bg-[#fffdf8] p-6 shadow-2xl">
+          <div className="liquid-dialog w-full max-w-sm rounded-[2rem] border border-[#e4dcc9] bg-[#fffdf8] p-6 shadow-2xl">
             <div className="mb-4 flex justify-center">
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gold-50">
                 <RefreshCw size={28} className="text-gold-600" />

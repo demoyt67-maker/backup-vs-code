@@ -21,7 +21,7 @@ export function BackHeader({ title, onBack, subtitle, theme }: Props) {
     <div className="relative z-10 mb-6 flex items-center gap-3">
       <button
         onClick={onBack}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border shadow-sm transition-all hover:-translate-x-0.5 hover:shadow-md active:scale-90"
+        className="liquid-button flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border shadow-sm transition-all hover:-translate-x-0.5 hover:shadow-md active:scale-90"
         aria-label="Back"
         style={{ borderColor: theme?.border ?? 'rgba(11,66,57,0.12)', background: theme?.surface ?? '#fffdf8', color: theme?.primaryStrong ?? '#0b6453' }}
       >

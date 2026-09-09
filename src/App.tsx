@@ -1,4 +1,4 @@
-import { useCallback, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { TopNav, BottomNav } from '@/components/Navigation';
 import { CLASS_THEMES } from '@/theme';
 import { HomeView } from '@/views/HomeView';
@@ -15,8 +15,12 @@ import type { View } from '@/types';
 
 export type ClassLevel = 1 | 2 | 3;
 type Theme = (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
+type AppearanceMode = 'light' | 'dark' | 'system';
+type EffectiveAppearance = 'light' | 'dark';
 
 const SELECTED_CLASS_KEY = 'madrasa-selected-class';
+const SUPER_ADMIN_MODE_KEY = 'madrasa-super-admin-test-mode';
+const APPEARANCE_MODE_KEY = 'madrasa-appearance-mode';
 
 const CLASS_OPTIONS: { level: ClassLevel; title: string; subtitle: string; accent: string; badge: string }[] = [
   { level: 1, title: 'Class 1', subtitle: 'Beginner friendly • simple letters & tracing', accent: 'linear-gradient(135deg, #ffb8c9 0%, #ffd678 50%, #7adbc4 100%)', badge: 'bg-white/15' },
@@ -42,6 +46,76 @@ function saveSelectedClass(level: ClassLevel) {
   } catch {
     // ignore
   }
+}
+
+function loadSuperAdminMode(): boolean {
+  try {
+    const raw = localStorage.getItem(SUPER_ADMIN_MODE_KEY);
+    return raw === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function saveSuperAdminMode(enabled: boolean) {
+  try {
+    localStorage.setItem(SUPER_ADMIN_MODE_KEY, String(enabled));
+  } catch {
+    // ignore
+  }
+}
+
+function loadAppearanceMode(): AppearanceMode {
+  try {
+    const raw = localStorage.getItem(APPEARANCE_MODE_KEY);
+    if (raw === 'light' || raw === 'dark' || raw === 'system') {
+      return raw;
+    }
+  } catch {
+    // ignore
+  }
+  return 'system';
+}
+
+function saveAppearanceMode(mode: AppearanceMode) {
+  try {
+    localStorage.setItem(APPEARANCE_MODE_KEY, mode);
+  } catch {
+    // ignore
+  }
+}
+
+function getEffectiveAppearance(mode: AppearanceMode, prefersDark: boolean): EffectiveAppearance {
+  return mode === 'system' ? (prefersDark ? 'dark' : 'light') : mode;
+}
+
+function applyAppearanceMode(theme: Theme, appearance: EffectiveAppearance): Theme {
+  const isDark = appearance === 'dark';
+
+  return {
+    ...theme,
+    surface: isDark ? '#111827' : theme.surface,
+    surfaceStrong: isDark ? '#1f2937' : theme.surfaceStrong,
+    background: isDark ? '#0b1220' : theme.background,
+    text: isDark ? '#f3f7ff' : theme.text,
+    muted: isDark ? '#cbd5e1' : theme.muted,
+    border: isDark ? 'rgba(255,255,255,0.12)' : theme.border,
+    heroGlow: isDark
+      ? 'linear-gradient(135deg, rgba(96, 165, 250, 0.22), rgba(255,255,255,0.06) 42%, rgba(148,163,184,0.18))'
+      : theme.heroGlow,
+    styleVars: {
+      ...theme.styleVars,
+      '--theme-surface': isDark ? '#111827' : theme.styleVars['--theme-surface'],
+      '--theme-surface-strong': isDark ? '#1f2937' : theme.styleVars['--theme-surface-strong'],
+      '--theme-background': isDark ? '#0b1220' : theme.styleVars['--theme-background'],
+      '--theme-text': isDark ? '#f3f7ff' : theme.styleVars['--theme-text'],
+      '--theme-muted': isDark ? '#cbd5e1' : theme.styleVars['--theme-muted'],
+      '--theme-border': isDark ? 'rgba(255,255,255,0.12)' : theme.styleVars['--theme-border'],
+      '--theme-hero-glow': isDark
+        ? 'linear-gradient(135deg, rgba(96, 165, 250, 0.22), rgba(255,255,255,0.06) 42%, rgba(148,163,184,0.18))'
+        : theme.styleVars['--theme-hero-glow'],
+    },
+  };
 }
 
 function ClassSelectionScreen({ onSelect, currentClass }: { onSelect: (level: ClassLevel) => void; currentClass: ClassLevel | null }) {
@@ -91,13 +165,46 @@ function ClassSelectionScreen({ onSelect, currentClass }: { onSelect: (level: Cl
 function App() {
   const [view, setView] = useState<View>('home');
   const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(() => loadSelectedClass());
+  const [isSuperAdminMode, setIsSuperAdminMode] = useState<boolean>(() => loadSuperAdminMode());
+  const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>(() => loadAppearanceMode());
+  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false;
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (event: MediaQueryListEvent) => setSystemPrefersDark(event.matches);
+
+    setSystemPrefersDark(mediaQuery.matches);
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
+  }, []);
+
   const currentClassOnSelection = selectedClass ?? loadSelectedClass();
-  const selectedTheme: Theme = CLASS_THEMES[currentClassOnSelection ?? 1];
+  const effectiveAppearance = getEffectiveAppearance(appearanceMode, systemPrefersDark);
+  const selectedTheme: Theme = useMemo(
+    () => applyAppearanceMode(CLASS_THEMES[currentClassOnSelection ?? 1], effectiveAppearance),
+    [currentClassOnSelection, effectiveAppearance]
+  );
   const { data, recordQuizResult, recordWritingProgress, resetAll } = useScoreStore(selectedClass ?? 1);
   const {
     learned, toggleLetter,
     harakatLearned, toggleHarakat, markHarakat,
     letterSoundPracticeLearned, markLetterSoundPractice,
+    readingPracticeLearned, markReadingPractice,
     sukoonLearned, toggleSukoon,
     tanweenLearned, toggleTanween,
     wordsLearned, toggleWord, markWord,
@@ -113,6 +220,18 @@ function App() {
     setSelectedClass(level);
     setView('home');
   }, []);
+  const toggleSuperAdminMode = useCallback(() => {
+    setIsSuperAdminMode((prev) => {
+      const next = !prev;
+      saveSuperAdminMode(next);
+      return next;
+    });
+  }, []);
+
+  const updateAppearanceMode = useCallback((mode: AppearanceMode) => {
+    setAppearanceMode(mode);
+    saveAppearanceMode(mode);
+  }, []);
   const resetEverything = useCallback(() => {
     resetAll();
     resetLearning();
@@ -123,6 +242,7 @@ function App() {
       className="islamic-pattern min-h-screen"
       style={{
         ...(selectedTheme.styleVars as CSSProperties),
+        colorScheme: effectiveAppearance,
         transition: 'background-color 500ms ease, color 500ms ease, border-color 500ms ease, box-shadow 500ms ease, background 500ms ease',
       }}
     >
@@ -136,6 +256,10 @@ function App() {
             selectedClass={selectedClass}
             onSelectClass={handleSelectClass}
             theme={selectedTheme}
+            appearanceMode={appearanceMode}
+            onChangeAppearanceMode={updateAppearanceMode}
+            isSuperAdminMode={isSuperAdminMode}
+            onToggleSuperAdminMode={toggleSuperAdminMode}
           />
         )}
         {selectedClass && selectedClass === 1 && view === 'quiz' && (
@@ -156,6 +280,8 @@ function App() {
             onMarkHarakat={markHarakat}
             letterSoundPracticeLearned={letterSoundPracticeLearned}
             onMarkLetterSoundPractice={markLetterSoundPractice}
+            readingPracticeLearned={readingPracticeLearned}
+            onMarkReadingPractice={markReadingPractice}
             sukoonLearned={sukoonLearned}
             onToggleSukoon={toggleSukoon}
             tanweenLearned={tanweenLearned}
@@ -165,6 +291,7 @@ function App() {
             onMarkWord={markWord}
             onResetLearning={resetLearning}
             selectedClass={selectedClass}
+            isSuperAdminMode={isSuperAdminMode}
           />
         )}
         {selectedClass && selectedClass === 1 && view === 'writing' && (
@@ -193,7 +320,7 @@ function App() {
           />
         )}
       </main>
-      <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} />
+      {selectedClass && view !== 'home' && <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} />}
     </div>
   );
 }

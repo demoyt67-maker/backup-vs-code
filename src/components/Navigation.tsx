@@ -42,7 +42,7 @@ export function BottomNav({ current, onNavigate, theme, selectedClass = 1 }: Pro
   const visibleItems: NavItem[] = selectedClass === 1 ? items : items.filter((item) => item.view !== 'writing');
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 border-t bg-[#fffdf8]/90 shadow-[0_-8px_24px_rgba(11,66,57,0.08)] backdrop-blur-xl md:hidden" style={{ borderColor: theme?.border ?? 'rgba(11,66,57,0.12)', background: theme?.surface ?? '#fffdf8' }}>
+    <nav className="liquid-nav fixed bottom-0 inset-x-0 z-40 border-t md:hidden" style={{ borderColor: theme?.border ?? 'rgba(11,66,57,0.12)', background: theme?.surface ?? '#fffdf8' }}>
       <div className="flex items-stretch justify-around px-1 py-1.5 pb-[calc(0.375rem+env(safe-area-inset-bottom))]">
         {visibleItems.map(({ view, label, icon: Icon }) => {
           const active = current === view;
@@ -50,7 +50,7 @@ export function BottomNav({ current, onNavigate, theme, selectedClass = 1 }: Pro
             <button
               key={view}
               onClick={() => onNavigate(view)}
-              className="flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 transition-all active:scale-95"
+              className="liquid-button flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 transition-all active:scale-95"
               aria-label={label}
             >
               <span
@@ -85,7 +85,7 @@ export function TopNav({ current, onNavigate, theme, selectedClass = 1 }: TopNav
       ? [...items, { view: 'teacher', label: 'Teacher', icon: GraduationCap }]
       : topItems;
   return (
-    <header className="fixed top-0 inset-x-0 z-40 hidden border-b bg-[#fffdf8]/90 shadow-[0_8px_24px_rgba(11,66,57,0.05)] backdrop-blur-xl md:block" style={{ borderColor: theme?.border ?? 'rgba(11,66,57,0.12)', background: theme?.surface ?? '#fffdf8' }}>
+    <header className="liquid-nav fixed top-0 inset-x-0 z-40 hidden border-b md:block" style={{ borderColor: theme?.border ?? 'rgba(11,66,57,0.12)', background: theme?.surface ?? '#fffdf8' }}>
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
         <button
           onClick={() => onNavigate('home')}
@@ -108,7 +108,7 @@ export function TopNav({ current, onNavigate, theme, selectedClass = 1 }: TopNav
               <button
                 key={view}
                 onClick={() => onNavigate(view)}
-                className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all active:scale-95"
+                className="liquid-button flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all active:scale-95"
                 style={
                   active
                     ? { background: `linear-gradient(135deg, ${theme?.primary ?? '#0d7c66'} 0%, ${theme?.primaryStrong ?? '#0b6453'} 100%)`, color: '#fff', boxShadow: `0 10px 18px ${theme?.primary ?? '#0d7c66'}33` }

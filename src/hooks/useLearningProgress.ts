@@ -35,6 +35,7 @@ export function useLearningProgress(selectedClass: ClassLevel) {
   const [learned, setLearned] = useState<Set<number>>(() => loadSet<number>(storageKey('madrasa-arabic-learn-progress', selectedClass), isLetterIndex));
   const [harakatLearned, setHarakatLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-harakat-progress', selectedClass), isString));
   const [letterSoundPracticeLearned, setLetterSoundPracticeLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-letter-sound-practice-progress', selectedClass), isString));
+  const [readingPracticeLearned, setReadingPracticeLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-reading-practice-progress', selectedClass), isString));
   const [sukoonLearned, setSukoonLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-sukoon-progress', selectedClass), isString));
   const [tanweenLearned, setTanweenLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-tanween-progress', selectedClass), isString));
   const [wordsLearned, setWordsLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-words-progress', selectedClass), isString));
@@ -43,6 +44,7 @@ export function useLearningProgress(selectedClass: ClassLevel) {
     setLearned(loadSet<number>(storageKey('madrasa-arabic-learn-progress', selectedClass), isLetterIndex));
     setHarakatLearned(loadSet<string>(storageKey('madrasa-arabic-harakat-progress', selectedClass), isString));
     setLetterSoundPracticeLearned(loadSet<string>(storageKey('madrasa-arabic-letter-sound-practice-progress', selectedClass), isString));
+    setReadingPracticeLearned(loadSet<string>(storageKey('madrasa-arabic-reading-practice-progress', selectedClass), isString));
     setSukoonLearned(loadSet<string>(storageKey('madrasa-arabic-sukoon-progress', selectedClass), isString));
     setTanweenLearned(loadSet<string>(storageKey('madrasa-arabic-tanween-progress', selectedClass), isString));
     setWordsLearned(loadSet<string>(storageKey('madrasa-arabic-words-progress', selectedClass), isString));
@@ -97,6 +99,17 @@ export function useLearningProgress(selectedClass: ClassLevel) {
       const next = new Set(prev);
       next.add(key);
       saveSet(storageKey('madrasa-arabic-letter-sound-practice-progress', selectedClass), next);
+      return next;
+    });
+  }, [selectedClass]);
+
+  // --- Set 2 simple reading practice ops ---
+  const markReadingPractice = useCallback((key: string) => {
+    setReadingPracticeLearned((prev) => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      saveSet(storageKey('madrasa-arabic-reading-practice-progress', selectedClass), next);
       return next;
     });
   }, [selectedClass]);
@@ -170,12 +183,14 @@ export function useLearningProgress(selectedClass: ClassLevel) {
     setLearned(empty);
     setHarakatLearned(new Set());
     setLetterSoundPracticeLearned(new Set());
+    setReadingPracticeLearned(new Set());
     setSukoonLearned(new Set());
     setTanweenLearned(new Set());
     setWordsLearned(new Set());
     saveSet(storageKey('madrasa-arabic-learn-progress', selectedClass), empty);
     saveSet(storageKey('madrasa-arabic-harakat-progress', selectedClass), new Set());
     saveSet(storageKey('madrasa-arabic-letter-sound-practice-progress', selectedClass), new Set());
+    saveSet(storageKey('madrasa-arabic-reading-practice-progress', selectedClass), new Set());
     saveSet(storageKey('madrasa-arabic-sukoon-progress', selectedClass), new Set());
     saveSet(storageKey('madrasa-arabic-tanween-progress', selectedClass), new Set());
     saveSet(storageKey('madrasa-arabic-words-progress', selectedClass), new Set());
@@ -190,6 +205,8 @@ export function useLearningProgress(selectedClass: ClassLevel) {
     markHarakat,
     letterSoundPracticeLearned,
     markLetterSoundPractice,
+    readingPracticeLearned,
+    markReadingPractice,
     sukoonLearned,
     toggleSukoon,
     markSukoon,

@@ -19,7 +19,7 @@ export function ScoreView({ onHome, score, onReset }: Props) {
       <BackHeader title="My Score" onBack={onHome} subtitle="Your learning progress" />
 
       {/* quiz card */}
-      <div className="screen-panel-dark relative mb-4 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#123f38] to-[#082b25] p-5 text-white shadow-2xl sm:p-6">
+      <div className="screen-panel-dark liquid-panel relative mb-4 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#123f38] to-[#082b25] p-5 text-white shadow-2xl sm:p-6">
         <div className="flex items-center gap-3">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white">
             <Trophy size={24} />
@@ -56,7 +56,7 @@ export function ScoreView({ onHome, score, onReset }: Props) {
       </div>
 
       {/* writing card */}
-      <div className="screen-panel-dark relative mb-4 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#b77a27] to-[#d5a344] p-5 shadow-xl sm:p-6">
+      <div className="screen-panel-dark liquid-panel relative mb-4 overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#b77a27] to-[#d5a344] p-5 shadow-xl sm:p-6">
         <div className="flex items-center gap-3">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white">
             <PenTool size={24} />
@@ -87,7 +87,7 @@ export function ScoreView({ onHome, score, onReset }: Props) {
       </div>
 
       {/* learn card */}
-      <div className="screen-panel mb-4 flex items-center gap-3 rounded-[1.75rem] bg-[#fffdf8] p-5">
+      <div className="screen-panel liquid-panel mb-4 flex items-center gap-3 rounded-[1.75rem] bg-[#fffdf8] p-5">
         <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-teal-700 text-white">
           <BookOpen size={24} />
         </span>

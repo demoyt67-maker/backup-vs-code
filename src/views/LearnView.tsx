@@ -3,6 +3,7 @@ import { Lock, CheckCircle2, ChevronRight, Star, RotateCcw, BookOpen, Sparkles, 
 import { BackHeader } from '@/components/BackHeader';
 import { HarakatPractice } from '@/components/HarakatPractice';
 import { LetterSoundPractice } from '@/components/LetterSoundPractice';
+import { SimpleArabicReadingPractice, SIMPLE_READING_PRACTICE_ITEMS } from '@/components/SimpleReadingPractice';
 import { LETTER_SOUND_PRACTICE_ITEMS } from '@/data/letterSoundPractice';
 import { WordLearnLevel, WordMatchingLevel, WordMultipleChoiceLevel, WordMemoryLevel, WordMixedChallengeLevel } from '@/components/WordActivities';
 import {
@@ -36,6 +37,7 @@ import { TOTAL_LETTERS, type ArabicLetter } from '@/data/letters';
 interface Props {
   onHome: () => void;
   selectedClass: 1 | 2 | 3;
+  isSuperAdminMode: boolean;
   learned: Set<number>;
   onToggleLetter: (letterIndex: number) => void;
   harakatLearned: Set<string>;
@@ -43,6 +45,8 @@ interface Props {
   onMarkHarakat: (key: string) => void;
   letterSoundPracticeLearned: Set<string>;
   onMarkLetterSoundPractice: (key: string) => void;
+  readingPracticeLearned: Set<string>;
+  onMarkReadingPractice: (key: string) => void;
   sukoonLearned: Set<string>;
   onToggleSukoon: (key: string) => void;
   tanweenLearned: Set<string>;
@@ -87,6 +91,8 @@ export function LearnView({
   onMarkHarakat,
   letterSoundPracticeLearned,
   onMarkLetterSoundPractice,
+  readingPracticeLearned,
+  onMarkReadingPractice,
   sukoonLearned,
   onToggleSukoon,
   tanweenLearned,
@@ -95,6 +101,7 @@ export function LearnView({
   onToggleWord,
   onMarkWord,
   onResetLearning,
+  isSuperAdminMode,
 }: Props) {
   const availableSets = AVAILABLE_SETS_BY_CLASS[selectedClass];
   const [openSet, setOpenSet] = useState<SetId>(availableSets[0]);
@@ -104,6 +111,7 @@ export function LearnView({
   const set1Complete = learned.size >= TOTAL_LETTERS;
   const set2Complete = SET2_REQUIRED_KEYS.every((key) => harakatLearned.has(key));
   const letterSoundPracticeCompletedCount = LETTER_SOUND_PRACTICE_ITEMS.filter((item) => letterSoundPracticeLearned.has(item.id)).length;
+  const readingPracticeCompletedCount = SIMPLE_READING_PRACTICE_ITEMS.filter((item) => readingPracticeLearned.has(item.id)).length;
   const set4Complete = SET4_REQUIRED_KEYS.every((key) => sukoonLearned.has(key));
   const set5Complete = SET5_REQUIRED_KEYS.every((key) => tanweenLearned.has(key));
   const set6Complete = SET6_REQUIRED_KEYS.every((key) => wordsLearned.has(key));
@@ -114,13 +122,14 @@ export function LearnView({
   const set6CompletedCount = SET6_REQUIRED_KEYS.filter((key) => wordsLearned.has(key)).length;
 
   // ----- Unlock chain: 1 → 2 → 4 → 5 → 6 -----
-  const set2Unlocked = selectedClass >= 2;
-  const set4Unlocked = selectedClass === 2 ? set2Complete : selectedClass === 3;
-  const set5Unlocked = selectedClass === 3;
-  const set6Unlocked = selectedClass === 3 ? set5Complete : false;
+  const set2Unlocked = isSuperAdminMode ? true : selectedClass >= 2;
+  const set4Unlocked = isSuperAdminMode ? true : selectedClass === 2 ? set2Complete : selectedClass === 3;
+  const set5Unlocked = isSuperAdminMode ? true : selectedClass === 3;
+  const set6Unlocked = isSuperAdminMode ? true : selectedClass === 3 ? set5Complete : false;
 
   // ----- Set 1 helpers -----
   const isSet1LevelUnlocked = (level: number): boolean => {
+    if (isSuperAdminMode) return true;
     if (level === 1) return true;
     const prev = SET1_LEVELS[level - 2];
     return prev.letters.every((l) => learned.has(l.index));
@@ -131,6 +140,7 @@ export function LearnView({
 
   // ----- Set 2 helpers -----
   const isSet2LevelUnlocked = (level: number): boolean => {
+    if (isSuperAdminMode) return true;
     if (!set2Unlocked) return false;
     if (level === 1) return true;
     const prev = SET2_LEVELS[level - 2];
@@ -142,6 +152,7 @@ export function LearnView({
 
   // ----- Set 4 helpers -----
   const isSet4LevelUnlocked = (level: number): boolean => {
+    if (isSuperAdminMode) return true;
     if (!set4Unlocked) return false;
     if (level === 1) return true;
     const prev = SET4_LEVELS[level - 2];
@@ -155,6 +166,7 @@ export function LearnView({
 
   // ----- Set 5 helpers -----
   const isSet5LevelUnlocked = (level: number): boolean => {
+    if (isSuperAdminMode) return true;
     if (!set5Unlocked) return false;
     if (level === 1) return true;
     const prev = SET5_LEVELS[level - 2];
@@ -177,11 +189,11 @@ export function LearnView({
   // ----- Common -----
   const handleSetClick = (set: SetId) => {
     const unlockedMap: Record<SetId, boolean> = {
-      set1: selectedClass === 1,
-      set2: selectedClass >= 2,
-      set4: selectedClass === 2 ? set2Complete : selectedClass === 3,
-      set5: selectedClass === 3,
-      set6: selectedClass === 3 ? set5Complete : false,
+      set1: isSuperAdminMode ? true : selectedClass === 1,
+      set2: isSuperAdminMode ? true : selectedClass >= 2,
+      set4: isSuperAdminMode ? true : selectedClass === 2 ? set2Complete : selectedClass === 3,
+      set5: isSuperAdminMode ? true : selectedClass === 3,
+      set6: isSuperAdminMode ? true : selectedClass === 3 ? set5Complete : false,
     };
     if (!unlockedMap[set]) return;
     setOpenSet(set);
@@ -207,7 +219,7 @@ export function LearnView({
     iconInactiveCls: string;
   };
 
-  const setButtons = [
+  const setButtons: SetButton[] = [
     {
       id: 'set1',
       title: SET1_TITLE,
@@ -268,7 +280,9 @@ export function LearnView({
       iconActiveCls: 'bg-white/20 text-white',
       iconInactiveCls: 'bg-gradient-to-br from-gold-500 to-primary-600 text-white',
     },
-  ].filter((set) => availableSets.includes(set.id));
+  ];
+
+  const visibleSetButtons = setButtons.filter((set): set is SetButton => availableSets.includes(set.id));
 
   return (
     <div className="screen-shell mx-auto max-w-4xl animate-fade-in px-4 pb-28 pt-6 md:pb-12 md:pt-24">
@@ -276,7 +290,7 @@ export function LearnView({
 
       {/* Set selector */}
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {setButtons.map((s) => {
+        {visibleSetButtons.map((s) => {
           const isOpen = openSet === s.id;
           const Icon = s.icon;
           return (
@@ -284,7 +298,7 @@ export function LearnView({
               key={s.id}
               onClick={() => handleSetClick(s.id)}
               disabled={!s.unlocked}
-              className={`screen-reveal interactive-card flex items-center gap-3 rounded-[1.5rem] border p-4 text-left shadow-sm hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] ${
+              className={`screen-reveal liquid-card interactive-card flex items-center gap-3 rounded-[1.5rem] border p-4 text-left shadow-sm hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] ${
                 isOpen
                   ? `bg-gradient-to-br ${s.activeCls}`
                   : s.unlocked
@@ -492,9 +506,9 @@ export function LearnView({
           <div className="mt-4 rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-gold-100">
             <div className="mb-2 flex items-center justify-between gap-3">
               <div>
-                <h4 className="text-base font-black text-primary-900">Letter Sound Practice</h4>
+                <h4 className="text-base font-black text-primary-900">Letter Pattern Practice</h4>
                 <p className="text-xs text-primary-700">
-                  {letterSoundPracticeCompletedCount}/{LETTER_SOUND_PRACTICE_ITEMS.length} sound cards practiced
+                  {letterSoundPracticeCompletedCount}/{LETTER_SOUND_PRACTICE_ITEMS.length} pattern cards practiced
                 </p>
               </div>
               <span className="rounded-full bg-gold-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-gold-700">
@@ -502,6 +516,21 @@ export function LearnView({
               </span>
             </div>
             <LetterSoundPractice onMark={onMarkLetterSoundPractice} />
+          </div>
+
+          <div className="mt-4 rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-primary-100">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div>
+                <h4 className="text-base font-black text-primary-900">Simple Arabic Reading Practice</h4>
+                <p className="text-xs text-primary-700">
+                  {readingPracticeCompletedCount}/{SIMPLE_READING_PRACTICE_ITEMS.length} reading cards practiced
+                </p>
+              </div>
+              <span className="rounded-full bg-primary-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-primary-700">
+                Class 2 only
+              </span>
+            </div>
+            <SimpleArabicReadingPractice onMark={onMarkReadingPractice} />
           </div>
         </>
       )}

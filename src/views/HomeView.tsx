@@ -3,12 +3,18 @@ import type { View } from '@/types';
 import type { ScoreData } from '@/hooks/useScoreStore';
 import { CLASS_THEMES } from '@/theme';
 
+type AppearanceMode = 'light' | 'dark' | 'system';
+
 interface Props {
   onNavigate: (v: View) => void;
   score: ScoreData;
   selectedClass: 1 | 2 | 3;
   onSelectClass: (level: 1 | 2 | 3) => void;
   theme: (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
+  appearanceMode: AppearanceMode;
+  onChangeAppearanceMode: (mode: AppearanceMode) => void;
+  isSuperAdminMode: boolean;
+  onToggleSuperAdminMode: () => void;
 }
 
 const CLASS_OPTIONS: { level: 1 | 2 | 3; title: string; subtitle: string; accent: string; badge: string }[] = [
@@ -17,7 +23,17 @@ const CLASS_OPTIONS: { level: 1 | 2 | 3; title: string; subtitle: string; accent
   { level: 3, title: 'Class 3', subtitle: 'Advanced • full practice, quizzes, and word activities', accent: 'linear-gradient(135deg, #c9b9ff 0%, #756ae7 48%, #f7bf6d 100%)', badge: 'bg-white/15' },
 ];
 
-export function HomeView({ onNavigate, score, selectedClass, onSelectClass, theme }: Props) {
+export function HomeView({
+  onNavigate,
+  score,
+  selectedClass,
+  onSelectClass,
+  theme,
+  appearanceMode,
+  onChangeAppearanceMode,
+  isSuperAdminMode,
+  onToggleSuperAdminMode,
+}: Props) {
   const classLabel = `Class ${selectedClass}`;
   const classDescription =
     selectedClass === 1
@@ -27,6 +43,11 @@ export function HomeView({ onNavigate, score, selectedClass, onSelectClass, them
         : 'Full advanced pathway with all learning sets and activities.';
 
   const cardStyles = [theme.card1, theme.card2, theme.card3, theme.card1];
+  const appearanceOptions: { mode: AppearanceMode; label: string; description: string }[] = [
+    { mode: 'light', label: 'Light', description: 'Always light' },
+    { mode: 'dark', label: 'Dark', description: 'Always dark' },
+    { mode: 'system', label: 'System', description: 'Match device' },
+  ];
 
   const cards: {
     view: View;
@@ -81,49 +102,40 @@ export function HomeView({ onNavigate, score, selectedClass, onSelectClass, them
 
   return (
     <div className="home-shell mx-auto max-w-5xl animate-fade-in px-4 pb-28 pt-5 md:pb-12 md:pt-24">
-      <div className="home-reveal mb-5 rounded-[2rem] border border-white/40 bg-white/70 p-4 shadow-[0_22px_40px_rgba(11,66,57,0.10)] backdrop-blur-xl md:p-5" style={{ borderColor: theme.border, background: theme.surface }}>
-        <div className="flex items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg" style={{ background: theme.hero, boxShadow: `0 16px 28px ${theme.primary}44`, color: '#fff' }}>
-            <GraduationCap size={22} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: theme.primaryStrong }}>Select Your Class</p>
-            <h2 className="mt-1 text-xl font-black leading-tight md:text-2xl" style={{ color: theme.text }}>
+      <div className="home-reveal liquid-panel mb-5 rounded-[1.8rem] p-3 md:p-4" style={{ borderColor: theme.border, background: theme.surface }}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: theme.primaryStrong }}>Welcome</p>
+            <h2 className="mt-1 text-lg font-black leading-tight md:text-xl" style={{ color: theme.text }}>
               Current: Class {selectedClass}
             </h2>
           </div>
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl shadow-lg" style={{ background: theme.hero, boxShadow: `0 16px 28px ${theme.primary}44`, color: '#fff' }}>
+            <GraduationCap size={18} />
+          </span>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {CLASS_OPTIONS.map(({ level, title, subtitle, accent, badge }, index) => {
+        <div className="flex flex-wrap gap-2">
+          {CLASS_OPTIONS.map(({ level, title, accent }, index) => {
             const isSelected = selectedClass === level;
             return (
               <button
                 key={level}
                 onClick={() => onSelectClass(level)}
-                className={`group relative overflow-hidden rounded-[1.6rem] p-4 text-left text-white transition-all active:scale-[0.98] ${isSelected ? 'ring-4 ring-white/90 shadow-2xl' : 'ring-1 ring-white/30 shadow-xl hover:-translate-y-0.5'}`}
+                className={`group relative flex items-center gap-2 rounded-[1rem] px-3 py-2 text-left transition-all active:scale-[0.98] ${isSelected ? 'ring-2 ring-white/90 shadow-lg' : 'ring-1 ring-white/40 hover:-translate-y-0.5'}`}
                 style={{
-                  background: accent,
-                  animationDelay: `${index * 120}ms`,
-                  boxShadow: isSelected ? `0 20px 34px ${theme.primary}40` : '0 14px 30px rgba(11, 66, 57, 0.08)',
-                  transform: isSelected ? 'translateY(-2px)' : undefined,
+                  background: isSelected ? accent : 'rgba(255,255,255,0.36)',
+                  borderColor: isSelected ? 'rgba(255,255,255,0.7)' : theme.border,
+                  color: isSelected ? '#fff' : theme.text,
+                  animationDelay: `${index * 80}ms`,
+                  boxShadow: isSelected ? `0 16px 28px ${theme.primary}35` : '0 10px 24px rgba(11, 66, 57, 0.06)',
+                  transform: isSelected ? 'translateY(-1px)' : undefined,
                 }}
               >
-                <div className="mb-4 flex items-center justify-between">
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl backdrop-blur-sm ${badge}`}>
-                    <span className="text-lg font-black">{level}</span>
-                  </div>
-                  {isSelected && (
-                    <span className="rounded-full bg-white/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white">
-                      Selected
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-xl font-black">{title}</h3>
-                <p className="mt-2 text-sm text-white/85">{subtitle}</p>
-                <div className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white/90">
-                  {isSelected ? 'Currently active' : 'Tap to select'}
-                </div>
+                <span className="flex h-7 w-7 items-center justify-center rounded-xl text-xs font-black" style={{ background: isSelected ? 'rgba(255,255,255,0.18)' : theme.accentSoft, color: isSelected ? '#fff' : theme.primaryStrong }}>
+                  {level}
+                </span>
+                <span className="text-sm font-black">{title}</span>
               </button>
             );
           })}
@@ -184,7 +196,7 @@ export function HomeView({ onNavigate, score, selectedClass, onSelectClass, them
           <button
             key={view}
             onClick={() => onNavigate(view)}
-            className={`home-reveal interactive-card group relative min-h-[148px] overflow-hidden rounded-[1.4rem] p-4 text-left shadow-lg shadow-primary-900/10 hover:-translate-y-1 hover:shadow-xl active:scale-[0.98] sm:p-5 md:min-h-[170px] md:p-6 ${featured ? 'col-span-2 md:col-span-2' : ''} ${view === 'score' ? 'col-span-2 md:col-span-2' : ''}`}
+            className={`home-reveal liquid-card interactive-card group relative min-h-[148px] overflow-hidden rounded-[1.4rem] p-4 text-left shadow-lg shadow-primary-900/10 hover:-translate-y-1 hover:shadow-xl active:scale-[0.98] sm:p-5 md:min-h-[170px] md:p-6 ${featured ? 'col-span-2 md:col-span-2' : ''} ${view === 'score' ? 'col-span-2 md:col-span-2' : ''}`}
             style={{ animationDelay: `${120 + index * 70}ms`, background: cardStyles[index] }}
           >
             <div className="pointer-events-none absolute inset-0 opacity-20 transition-opacity group-hover:opacity-35" style={{ backgroundImage: 'linear-gradient(135deg, transparent 55%, rgba(255,255,255,0.3) 55%, transparent 56%)', backgroundSize: '18px 18px' }} />
@@ -202,12 +214,71 @@ export function HomeView({ onNavigate, score, selectedClass, onSelectClass, them
         ))}
       </div>
 
-      {/* Teacher Mode */}
-      <button
-        onClick={() => onNavigate('teacher')}
-        className="home-reveal interactive-card mt-3 flex w-full items-center justify-between gap-3 rounded-[1.4rem] p-4 text-primary-900 shadow-sm hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] md:mt-4 md:px-5"
-        style={{ borderColor: theme.border, background: theme.surface, color: theme.text, animationDelay: '420ms' }}
-      >
+      <div className="home-reveal mt-3 flex flex-col gap-3 md:mt-4">
+        <div className="liquid-panel rounded-[1.4rem] p-3 shadow-sm" style={{ border: `1px solid ${theme.border}`, background: theme.surface }}>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: theme.primaryStrong }}>Appearance</p>
+              <h3 className="mt-1 text-base font-bold" style={{ color: theme.text }}>Theme Mode</h3>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {appearanceOptions.map(({ mode, label, description }) => {
+              const isActive = appearanceMode === mode;
+
+              return (
+                <button
+                  key={mode}
+                  onClick={() => onChangeAppearanceMode(mode)}
+                  className="liquid-button rounded-[1rem] border px-2 py-2.5 text-left transition-all active:scale-[0.98]"
+                  style={{
+                    borderColor: isActive ? theme.primary : theme.border,
+                    background: isActive ? theme.accentSoft : theme.surfaceStrong,
+                    boxShadow: isActive ? `0 12px 24px ${theme.primary}22` : 'none',
+                    color: isActive ? theme.primaryStrong : theme.text,
+                  }}
+                >
+                  <div className="text-sm font-black">{label}</div>
+                  <div className="mt-1 text-[10px] font-medium opacity-85" style={{ color: isActive ? theme.primaryStrong : theme.muted }}>
+                    {description}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <button
+          onClick={onToggleSuperAdminMode}
+          className={`flex items-center justify-between gap-3 rounded-[1.4rem] p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] ${
+            isSuperAdminMode
+              ? 'border border-yellow-300 bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-900'
+              : 'border border-primary-100 bg-white/90 text-primary-900'
+          }`}
+          style={{ borderColor: isSuperAdminMode ? '#facc15' : theme.border, background: isSuperAdminMode ? 'linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%)' : theme.surface, color: theme.text }}
+        >
+          <span className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 text-lg shadow-sm">
+              👑
+            </span>
+            <span className="flex flex-col items-start leading-tight">
+              <span className="text-base font-bold">{isSuperAdminMode ? 'Super Admin Test Mode Active' : 'Super Admin Test Mode'}</span>
+              <span className="text-xs" style={{ color: isSuperAdminMode ? '#78350f' : theme.muted }}>
+                {isSuperAdminMode ? 'Temporary developer mode is enabled' : 'Enable temporary testing access'}
+              </span>
+            </span>
+          </span>
+          <span className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]" style={{ background: isSuperAdminMode ? '#facc15' : theme.accentSoft, color: isSuperAdminMode ? '#78350f' : theme.primaryStrong }}>
+            {isSuperAdminMode ? 'ON' : 'OFF'}
+          </span>
+        </button>
+
+        <button
+          onClick={() => onNavigate('teacher')}
+          className="interactive-card flex w-full items-center justify-between gap-3 rounded-[1.4rem] p-4 text-primary-900 shadow-sm hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] md:px-5"
+          style={{ borderColor: theme.border, background: theme.surface, color: theme.text, animationDelay: '420ms' }}
+        >
         <span className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: theme.accentSoft, color: theme.primaryStrong }}>
             <GraduationCap size={22} />
@@ -218,7 +289,8 @@ export function HomeView({ onNavigate, score, selectedClass, onSelectClass, them
           </span>
         </span>
         <span className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.primaryStrong }}>For educators</span>
-      </button>
+        </button>
+      </div>
 
       {/* Footer */}
       <p className="mt-7 text-center text-xs font-medium md:mt-9" style={{ color: theme.muted }}>

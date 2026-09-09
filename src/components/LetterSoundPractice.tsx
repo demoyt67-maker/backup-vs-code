@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Check, RotateCcw, Sparkles, Volume2, X } from 'lucide-react';
+import { Check, RotateCcw, Sparkles, X } from 'lucide-react';
 import { LETTER_SOUND_PRACTICE_ITEMS, type LetterSoundPracticeItem } from '@/data/letterSoundPractice';
 
 const SOUND_OPTIONS = [
@@ -88,11 +88,11 @@ export function LetterSoundPractice({ onMark }: Props) {
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-primary-700 shadow-sm ring-1 ring-primary-100">
-            <Volume2 size={18} />
+            <Sparkles size={18} />
           </span>
           <div>
-            <h5 className="text-sm font-black text-primary-900">Letter Sound Practice</h5>
-            <p className="text-[10px] font-bold uppercase tracking-wide text-primary-700">Hear the sound • pick the right one</p>
+            <h5 className="text-sm font-black text-primary-900">Letter Pattern Practice</h5>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-primary-700">Match the pattern • pick the right sound</p>
           </div>
         </div>
         <span className="rounded-full bg-white px-2.5 py-1 text-xs font-black text-primary-700 shadow-sm ring-1 ring-primary-100">

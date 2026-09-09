@@ -9,6 +9,13 @@
   --text-body: #163b36;
   --text-muted: #4d6460;
   --bg-surface: #fffdf9;
+  --glass-surface: rgba(255, 255, 255, 0.54);
+  --glass-surface-strong: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.52);
+  --glass-border-soft: rgba(255, 255, 255, 0.28);
+  --glass-highlight: rgba(255, 255, 255, 0.38);
+  --glass-shadow: 0 22px 38px rgba(15, 44, 36, 0.12);
+  --glass-shadow-strong: 0 26px 56px rgba(15, 44, 36, 0.18);
 }
 
 * {
@@ -24,12 +31,18 @@ body {
   text-rendering: optimizeLegibility;
   font-size: 16px;
   line-height: 1.6;
-  background-color: #f3f9f6;
+  background:
+    radial-gradient(circle at top left, rgba(144, 206, 210, 0.18), transparent 22%),
+    radial-gradient(circle at top right, rgba(255, 204, 122, 0.16), transparent 24%),
+    linear-gradient(180deg, #f5fbf8 0%, #edf5f4 100%);
   color: var(--text-body);
 }
 
 body {
-  background-color: #f3f9f6;
+  background:
+    radial-gradient(circle at top left, rgba(144, 206, 210, 0.18), transparent 22%),
+    radial-gradient(circle at top right, rgba(255, 204, 122, 0.16), transparent 24%),
+    linear-gradient(180deg, #f5fbf8 0%, #edf5f4 100%);
   color: var(--text-body);
   overflow-x: hidden;
   overscroll-behavior: none;
@@ -106,6 +119,19 @@ header,
   position: relative;
 }
 
+.screen-shell::after {
+  content: '';
+  position: absolute;
+  inset: -2rem auto auto -2rem;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(255,255,255,0.45), transparent 68%);
+  filter: blur(30px);
+  pointer-events: none;
+  opacity: 0.75;
+}
+
 .screen-shell::before {
   content: '';
   position: absolute;
@@ -117,12 +143,19 @@ header,
 }
 
 .screen-panel {
-  border: 1px solid rgba(217, 169, 58, 0.16);
-  box-shadow: 0 14px 34px rgba(11, 66, 57, 0.07);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.38));
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  box-shadow: 0 22px 48px rgba(18, 62, 53, 0.10), inset 0 1px 0 rgba(255,255,255,0.45);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .screen-panel-dark {
-  box-shadow: 0 18px 38px rgba(4, 37, 31, 0.16);
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.72), rgba(17, 24, 39, 0.44));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 22px 48px rgba(4, 23, 31, 0.24);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .screen-reveal {
@@ -307,16 +340,85 @@ button:active,
   background-position: 0 0, 0 0, 0 0;
 }
 
-.glass {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+.glass,
+.liquid-panel,
+.liquid-card,
+.liquid-button,
+.liquid-button-primary,
+.liquid-dialog {
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.32));
+  box-shadow: 0 20px 40px rgba(18, 62, 53, 0.10), inset 0 1px 0 rgba(255,255,255,0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.liquid-panel,
+.liquid-card {
+  position: relative;
+  overflow: hidden;
 }
 
 .glass-dark {
-  background: rgba(11, 66, 57, 0.82);
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.72), rgba(17, 24, 39, 0.44));
+  border: 1px solid rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+}
+
+.liquid-card,
+.liquid-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.liquid-card::before,
+.liquid-panel::before,
+.liquid-button::before,
+.liquid-button-primary::before,
+.liquid-dialog::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.44), transparent 38%, rgba(255,255,255,0.08));
+}
+
+.liquid-button,
+.liquid-button-primary,
+.liquid-dialog {
+  position: relative;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease;
+}
+
+.liquid-button:hover,
+.liquid-button-primary:hover,
+.liquid-dialog:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--glass-shadow-strong);
+}
+
+.liquid-button:active,
+.liquid-button-primary:active,
+.liquid-dialog:active {
+  transform: translateY(0) scale(0.985);
+}
+
+.liquid-button {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0.22));
+  color: var(--theme-text, #163b36);
+}
+
+.liquid-button-primary {
+  border-color: rgba(255,255,255,0.32);
+  background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.10));
+  color: white;
+}
+
+.liquid-nav {
+  background: linear-gradient(180deg, rgba(255,255,255,0.4), rgba(255,255,255,0.18));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 /* Custom scrollbar */

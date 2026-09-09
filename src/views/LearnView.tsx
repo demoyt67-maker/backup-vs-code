@@ -386,78 +386,90 @@ export function LearnView({
                   chevronColor="text-primary-600"
                   onClick={() => handleLevelClick(level, unlocked)}
                 >
-                  <div className="space-y-3">
-                    <div className="rounded-[1.75rem] bg-gradient-to-br from-primary-50 via-white to-teal-50 p-3 ring-1 ring-primary-100">
-                      <div className="rounded-[1.5rem] bg-white/95 p-4 shadow-sm ring-1 ring-primary-100">
-                        <div className="flex flex-col items-center text-center">
-                          <div className="mb-2 inline-flex items-center rounded-full bg-primary-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.24em] text-primary-700">
-                            Letter {currentLetter.index}
-                          </div>
-                          <span className="font-arabic text-[6.5rem] leading-none text-primary-900 drop-shadow-[0_10px_24px_rgba(13,82,74,0.18)] sm:text-[7.5rem]">
-                            {currentLetter.arabic}
-                          </span>
-                          <p className="mt-1 text-xl font-black text-primary-900">{currentLetter.english}</p>
-                          <p className="text-sm font-medium text-primary-700">{currentLetter.malayalam}</p>
+                  <div className="space-y-4">
+                    <div className="rounded-[1.75rem] bg-gradient-to-br from-primary-50 via-white to-teal-50 p-4 ring-1 ring-primary-100">
+                      <div className="flex flex-col items-center text-center">
+                        <div className="mb-3 inline-flex items-center rounded-full bg-primary-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.24em] text-primary-700">
+                          Letter {currentLetter.index} of 28
                         </div>
 
-                        <div className="mt-4 overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-primary-50 to-white p-2 shadow-inner ring-1 ring-primary-100">
-                          <img
-                            src={getLetterIllustrationUrl(currentLetter)}
-                            alt={`${currentLetter.english} illustration`}
-                            className="mx-auto h-[220px] w-full max-w-[360px] rounded-[1.2rem] object-cover"
-                          />
-                        </div>
+                        <span className="font-arabic text-[7rem] leading-none text-primary-900 drop-shadow-[0_10px_24px_rgba(13,82,74,0.18)] sm:text-[8rem]">
+                          {currentLetter.arabic}
+                        </span>
 
-                        <div className="mt-4 rounded-[1.2rem] bg-primary-50 p-4 text-center ring-1 ring-primary-100">
-                          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary-700">Object word</p>
-                          <p className="mt-2 font-arabic text-[2.2rem] leading-none text-primary-900 sm:text-[2.6rem]">
-                            {currentVisual.arabicObjectName}
-                          </p>
-                          <p className="mt-2 text-sm font-bold text-primary-800">{currentVisual.label}</p>
-                        </div>
+                        <p className="mt-3 font-arabic text-[2.5rem] leading-tight text-primary-800 sm:text-[3rem]">
+                          {currentVisual.arabicObjectName}
+                        </p>
+
+                        <p className="mt-1 text-lg font-bold text-primary-700">{currentVisual.label}</p>
                       </div>
 
-                      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => moveLetter(-1)}
-                            disabled={currentLetterIndex === 0}
-                            className={`rounded-full px-3 py-2 text-sm font-black transition-all active:scale-95 ${
-                              currentLetterIndex === 0
-                                ? 'cursor-not-allowed bg-gray-100 text-gray-400'
-                                : 'bg-white text-primary-800 ring-1 ring-primary-100 hover:bg-primary-50'
-                            }`}
-                          >
-                            Previous
-                          </button>
-                          <button
-                            onClick={() => moveLetter(1)}
-                            disabled={currentLetterIndex === letters.length - 1}
-                            className={`rounded-full px-3 py-2 text-sm font-black transition-all active:scale-95 ${
-                              currentLetterIndex === letters.length - 1
-                                ? 'cursor-not-allowed bg-gray-100 text-gray-400'
-                                : 'bg-white text-primary-800 ring-1 ring-primary-100 hover:bg-primary-50'
-                            }`}
-                          >
-                            Next
-                          </button>
-                        </div>
+                      <div className="mt-4 overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-primary-50 to-white p-1.5 shadow-inner ring-1 ring-primary-100">
+                        <img
+                          src={getLetterIllustrationUrl(currentLetter)}
+                          alt={`${currentVisual.label} illustration`}
+                          className="mx-auto h-[180px] w-full max-w-[260px] rounded-[1.2rem] object-contain sm:h-[200px] sm:max-w-[280px]"
+                        />
+                      </div>
 
-                        <button
-                          onClick={() => onToggleLetter(currentLetter.index)}
-                          className={`rounded-full px-4 py-2 text-sm font-black transition-all active:scale-95 ${
-                            learned.has(currentLetter.index)
-                              ? 'bg-green-500 text-white shadow-md hover:bg-green-600'
-                              : 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md hover:shadow-lg'
-                          }`}
-                        >
-                          {learned.has(currentLetter.index) ? 'Mark as not learned' : 'Mark as learned'}
-                        </button>
+                      <div className="mt-4">
+                        <p className="mb-3 text-center text-xs font-black uppercase tracking-wider text-primary-700">Letter with Harakat</p>
+                        <div className="flex justify-center gap-2 sm:gap-3">
+                          {Object.values(HARAKAT).map((haraka) => (
+                            <div
+                              key={haraka.id}
+                              className="flex flex-col items-center rounded-[1.25rem] bg-white/80 p-3 shadow-sm ring-1 ring-primary-100 backdrop-blur-sm"
+                            >
+                              <span className="font-arabic text-4xl font-bold text-primary-900 sm:text-5xl">
+                                {applyHaraka(currentLetter.arabic, haraka.id)}
+                              </span>
+                              <span className="mt-1 text-xs font-bold text-primary-700">{haraka.name}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="rounded-[1.25rem] bg-white p-2.5 shadow-sm ring-1 ring-primary-100">
-                      <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => moveLetter(-1)}
+                          disabled={currentLetterIndex === 0}
+                          className={`rounded-full px-3 py-2 text-sm font-black transition-all active:scale-95 ${
+                            currentLetterIndex === 0
+                              ? 'cursor-not-allowed bg-gray-100 text-gray-400'
+                              : 'bg-white text-primary-800 ring-1 ring-primary-100 hover:bg-primary-50'
+                          }`}
+                        >
+                          Previous
+                        </button>
+                        <button
+                          onClick={() => moveLetter(1)}
+                          disabled={currentLetterIndex === letters.length - 1}
+                          className={`rounded-full px-3 py-2 text-sm font-black transition-all active:scale-95 ${
+                            currentLetterIndex === letters.length - 1
+                              ? 'cursor-not-allowed bg-gray-100 text-gray-400'
+                              : 'bg-white text-primary-800 ring-1 ring-primary-100 hover:bg-primary-50'
+                          }`}
+                        >
+                          Next
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={() => onToggleLetter(currentLetter.index)}
+                        className={`rounded-full px-4 py-2 text-sm font-black transition-all active:scale-95 ${
+                          learned.has(currentLetter.index)
+                            ? 'bg-green-500 text-white shadow-md hover:bg-green-600'
+                            : 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md hover:shadow-lg'
+                        }`}
+                      >
+                        {learned.has(currentLetter.index) ? 'Mark as not learned' : 'Mark as learned'}
+                      </button>
+                    </div>
+
+                    <div className="rounded-[1.25rem] bg-white p-3 shadow-sm ring-1 ring-primary-100">
+                      <div className="flex flex-wrap justify-center gap-2">
                         {letters.map((letter, index) => {
                           const isSelected = currentLetterIndex === index;
                           const isLearned = learned.has(letter.index);

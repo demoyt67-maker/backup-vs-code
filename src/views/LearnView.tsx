@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Lock, CheckCircle2, ChevronRight, Star, RotateCcw, BookOpen, Sparkles, Moon, Wind, Languages } from 'lucide-react';
 import { BackHeader } from '@/components/BackHeader';
 import { HarakatPractice } from '@/components/HarakatPractice';
-import { LetterSoundPractice } from '@/components/LetterSoundPractice';
+import { InteractiveHarakatPractice } from '@/components/InteractiveHarakatPractice';
 import { SimpleArabicReadingPractice, SIMPLE_READING_PRACTICE_ITEMS } from '@/components/SimpleReadingPractice';
-import { LETTER_SOUND_PRACTICE_ITEMS } from '@/data/letterSoundPractice';
+import { INTERACTIVE_HARAKAT_PRACTICE_COUNT } from '@/data/interactiveHarakatPractice';
+import { getLetterIllustrationMeta, getLetterIllustrationUrl } from '@/data/letterIllustrations';
 import { WordLearnLevel, WordMatchingLevel, WordMultipleChoiceLevel, WordMemoryLevel, WordMixedChallengeLevel } from '@/components/WordActivities';
 import {
   SET1_LEVELS,
@@ -43,10 +44,10 @@ interface Props {
   harakatLearned: Set<string>;
   onToggleHarakat: (key: string) => void;
   onMarkHarakat: (key: string) => void;
-  letterSoundPracticeLearned: Set<string>;
-  onMarkLetterSoundPractice: (key: string) => void;
   readingPracticeLearned: Set<string>;
   onMarkReadingPractice: (key: string) => void;
+  interactiveHarakatPracticeLearned: Set<string>;
+  onMarkInteractiveHarakatPractice: (key: string) => void;
   sukoonLearned: Set<string>;
   onToggleSukoon: (key: string) => void;
   tanweenLearned: Set<string>;
@@ -89,10 +90,10 @@ export function LearnView({
   harakatLearned,
   onToggleHarakat,
   onMarkHarakat,
-  letterSoundPracticeLearned,
-  onMarkLetterSoundPractice,
   readingPracticeLearned,
   onMarkReadingPractice,
+  interactiveHarakatPracticeLearned,
+  onMarkInteractiveHarakatPractice,
   sukoonLearned,
   onToggleSukoon,
   tanweenLearned,
@@ -106,12 +107,13 @@ export function LearnView({
   const availableSets = AVAILABLE_SETS_BY_CLASS[selectedClass];
   const [openSet, setOpenSet] = useState<SetId>(availableSets[0]);
   const [openLevel, setOpenLevel] = useState<number | null>(1);
+  const [set1LetterIndexesByLevel, setSet1LetterIndexesByLevel] = useState<Record<number, number>>({});
 
   // ----- Completion checks -----
   const set1Complete = learned.size >= TOTAL_LETTERS;
   const set2Complete = SET2_REQUIRED_KEYS.every((key) => harakatLearned.has(key));
-  const letterSoundPracticeCompletedCount = LETTER_SOUND_PRACTICE_ITEMS.filter((item) => letterSoundPracticeLearned.has(item.id)).length;
   const readingPracticeCompletedCount = SIMPLE_READING_PRACTICE_ITEMS.filter((item) => readingPracticeLearned.has(item.id)).length;
+  const interactiveHarakatPracticeCompletedCount = interactiveHarakatPracticeLearned.size;
   const set4Complete = SET4_REQUIRED_KEYS.every((key) => sukoonLearned.has(key));
   const set5Complete = SET5_REQUIRED_KEYS.every((key) => tanweenLearned.has(key));
   const set6Complete = SET6_REQUIRED_KEYS.every((key) => wordsLearned.has(key));
@@ -354,6 +356,21 @@ export function LearnView({
               const completed = set1LevelCompletedCount(letters);
               const allDone = completed === letters.length;
               const isOpen = openLevel === level && unlocked;
+              const currentLetterIndex = set1LetterIndexesByLevel[level] ?? 0;
+              const currentLetter = letters[currentLetterIndex] ?? letters[0];
+              const currentVisual = getLetterIllustrationMeta(currentLetter);
+
+              const moveLetter = (direction: number) => {
+                setSet1LetterIndexesByLevel((prev) => {
+                  const current = prev[level] ?? 0;
+                  const nextIndex = Math.max(0, Math.min(letters.length - 1, current + direction));
+                  return {
+                    ...prev,
+                    [level]: nextIndex,
+                  };
+                });
+              };
+
               return (
                 <LevelCard
                   key={level}
@@ -369,39 +386,103 @@ export function LearnView({
                   chevronColor="text-primary-600"
                   onClick={() => handleLevelClick(level, unlocked)}
                 >
-                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-                    {letters.map((letter) => {
-                      const isLearned = learned.has(letter.index);
-                      return (
+                  <div className="space-y-3">
+                    <div className="rounded-[1.75rem] bg-gradient-to-br from-primary-50 via-white to-teal-50 p-3 ring-1 ring-primary-100">
+                      <div className="rounded-[1.5rem] bg-white/95 p-4 shadow-sm ring-1 ring-primary-100">
+                        <div className="flex flex-col items-center text-center">
+                          <div className="mb-2 inline-flex items-center rounded-full bg-primary-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.24em] text-primary-700">
+                            Letter {currentLetter.index}
+                          </div>
+                          <span className="font-arabic text-[6.5rem] leading-none text-primary-900 drop-shadow-[0_10px_24px_rgba(13,82,74,0.18)] sm:text-[7.5rem]">
+                            {currentLetter.arabic}
+                          </span>
+                          <p className="mt-1 text-xl font-black text-primary-900">{currentLetter.english}</p>
+                          <p className="text-sm font-medium text-primary-700">{currentLetter.malayalam}</p>
+                        </div>
+
+                        <div className="mt-4 overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-primary-50 to-white p-2 shadow-inner ring-1 ring-primary-100">
+                          <img
+                            src={getLetterIllustrationUrl(currentLetter)}
+                            alt={`${currentLetter.english} illustration`}
+                            className="mx-auto h-[220px] w-full max-w-[360px] rounded-[1.2rem] object-cover"
+                          />
+                        </div>
+
+                        <div className="mt-4 rounded-[1.2rem] bg-primary-50 p-4 text-center ring-1 ring-primary-100">
+                          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-primary-700">Object word</p>
+                          <p className="mt-2 font-arabic text-[2.2rem] leading-none text-primary-900 sm:text-[2.6rem]">
+                            {currentVisual.arabicObjectName}
+                          </p>
+                          <p className="mt-2 text-sm font-bold text-primary-800">{currentVisual.label}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => moveLetter(-1)}
+                            disabled={currentLetterIndex === 0}
+                            className={`rounded-full px-3 py-2 text-sm font-black transition-all active:scale-95 ${
+                              currentLetterIndex === 0
+                                ? 'cursor-not-allowed bg-gray-100 text-gray-400'
+                                : 'bg-white text-primary-800 ring-1 ring-primary-100 hover:bg-primary-50'
+                            }`}
+                          >
+                            Previous
+                          </button>
+                          <button
+                            onClick={() => moveLetter(1)}
+                            disabled={currentLetterIndex === letters.length - 1}
+                            className={`rounded-full px-3 py-2 text-sm font-black transition-all active:scale-95 ${
+                              currentLetterIndex === letters.length - 1
+                                ? 'cursor-not-allowed bg-gray-100 text-gray-400'
+                                : 'bg-white text-primary-800 ring-1 ring-primary-100 hover:bg-primary-50'
+                            }`}
+                          >
+                            Next
+                          </button>
+                        </div>
+
                         <button
-                          key={letter.index}
-                          onClick={() => onToggleLetter(letter.index)}
-                          className={`group relative rounded-2xl p-3 text-center shadow-sm ring-1 transition-all active:scale-95 ${
-                            isLearned
-                              ? 'bg-green-50 ring-2 ring-green-400'
-                              : 'bg-white ring-primary-50 hover:-translate-y-0.5 hover:shadow-md'
+                          onClick={() => onToggleLetter(currentLetter.index)}
+                          className={`rounded-full px-4 py-2 text-sm font-black transition-all active:scale-95 ${
+                            learned.has(currentLetter.index)
+                              ? 'bg-green-500 text-white shadow-md hover:bg-green-600'
+                              : 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md hover:shadow-lg'
                           }`}
                         >
-                          {isLearned && (
-                            <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white shadow">
-                              <CheckCircle2 size={12} strokeWidth={3} />
-                            </span>
-                          )}
-                          <span className="absolute left-1.5 top-1.5 rounded-full bg-primary-50 px-1.5 py-0.5 text-[9px] font-bold text-primary-600">
-                            {letter.index}
-                          </span>
-                          <div className="mt-3 flex h-16 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-teal-50 transition-transform group-hover:scale-105">
-                            <span className="font-arabic text-5xl font-bold text-primary-900">{letter.arabic}</span>
-                          </div>
-                          <p className="mt-2 font-malayalam text-sm font-semibold text-primary-700">{letter.malayalam}</p>
-                          <p className="text-xs font-medium text-primary-700">{letter.english}</p>
-                          <p className="mt-1.5 text-[10px] font-bold uppercase tracking-wide text-primary-600">
-                            {isLearned ? 'Tap to undo' : 'Tap when learned'}
-                          </p>
+                          {learned.has(currentLetter.index) ? 'Mark as not learned' : 'Mark as learned'}
                         </button>
-                      );
-                    })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[1.25rem] bg-white p-2.5 shadow-sm ring-1 ring-primary-100">
+                      <div className="flex flex-wrap gap-2">
+                        {letters.map((letter, index) => {
+                          const isSelected = currentLetterIndex === index;
+                          const isLearned = learned.has(letter.index);
+
+                          return (
+                            <button
+                              key={letter.index}
+                              onClick={() => setSet1LetterIndexesByLevel((prev) => ({ ...prev, [level]: index }))}
+                              className={`flex items-center gap-2 rounded-full px-2.5 py-2 text-left text-xs font-black transition-all active:scale-95 ${
+                                isSelected
+                                  ? 'bg-primary-700 text-white shadow-sm'
+                                  : isLearned
+                                    ? 'bg-green-50 text-green-700 ring-1 ring-green-200'
+                                    : 'bg-primary-50 text-primary-700 ring-1 ring-primary-100'
+                              }`}
+                            >
+                              <span className="font-arabic text-2xl">{letter.arabic}</span>
+                              <span>{letter.english}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
+
                   {!allDone && (
                     <p className="mt-3 text-center text-xs text-primary-700">
                       Complete all 4 letters to unlock Level {level + 1 <= SET1_TOTAL_LEVELS ? level + 1 : '—'}
@@ -439,6 +520,24 @@ export function LearnView({
                 </div>
               );
             })}
+          </div>
+
+          <div className="mt-4 rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-gold-100">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div>
+                <h4 className="text-base font-black text-primary-900">Interactive Harakat Practice</h4>
+                <p className="text-xs text-primary-700">
+                  {interactiveHarakatPracticeCompletedCount}/{INTERACTIVE_HARAKAT_PRACTICE_COUNT} practice questions completed
+                </p>
+              </div>
+              <span className="rounded-full bg-gold-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-gold-700">
+                Class 2 only
+              </span>
+            </div>
+            <InteractiveHarakatPractice
+              completedKeys={interactiveHarakatPracticeLearned}
+              onMarkQuestion={onMarkInteractiveHarakatPractice}
+            />
           </div>
           <div className="space-y-3">
             {SET2_LEVELS.map((lvl) => {
@@ -501,21 +600,6 @@ export function LearnView({
                 </LevelCard>
               );
             })}
-          </div>
-
-          <div className="mt-4 rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-gold-100">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <div>
-                <h4 className="text-base font-black text-primary-900">Letter Pattern Practice</h4>
-                <p className="text-xs text-primary-700">
-                  {letterSoundPracticeCompletedCount}/{LETTER_SOUND_PRACTICE_ITEMS.length} pattern cards practiced
-                </p>
-              </div>
-              <span className="rounded-full bg-gold-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-gold-700">
-                Class 2 only
-              </span>
-            </div>
-            <LetterSoundPractice onMark={onMarkLetterSoundPractice} />
           </div>
 
           <div className="mt-4 rounded-[1.75rem] bg-white p-4 shadow-sm ring-1 ring-primary-100">

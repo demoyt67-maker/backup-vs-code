@@ -1,1 +1,1 @@
-export type View = 'home' | 'quiz' | 'learn' | 'writing' | 'score' | 'teacher';
+export type View = 'home' | 'quiz' | 'learn' | 'writing' | 'score';

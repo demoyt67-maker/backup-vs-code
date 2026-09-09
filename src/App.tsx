@@ -6,11 +6,8 @@ import { QuizView } from '@/views/QuizView';
 import { LearnView } from '@/views/LearnView';
 import { WritingView } from '@/views/WritingView';
 import { ScoreView } from '@/views/ScoreView';
-import { TeacherView } from '@/views/TeacherView';
 import { useScoreStore } from '@/hooks/useScoreStore';
 import { useLearningProgress } from '@/hooks/useLearningProgress';
-import { useTeacherAuth } from '@/hooks/useTeacherAuth';
-import { useTeacherCurriculum } from '@/hooks/useTeacherCurriculum';
 import type { View } from '@/types';
 
 export type ClassLevel = 1 | 2 | 3;
@@ -203,16 +200,13 @@ function App() {
   const {
     learned, toggleLetter,
     harakatLearned, toggleHarakat, markHarakat,
-    letterSoundPracticeLearned, markLetterSoundPractice,
     readingPracticeLearned, markReadingPractice,
+    interactiveHarakatPracticeLearned, markInteractiveHarakatPractice,
     sukoonLearned, toggleSukoon,
     tanweenLearned, toggleTanween,
     wordsLearned, toggleWord, markWord,
     resetLearning,
   } = useLearningProgress(selectedClass ?? 1);
-  const { isLoggedIn, hasAccount, username, login, logout, createAccount, updateCredentials } = useTeacherAuth();
-  const curriculum = useTeacherCurriculum();
-
   const navigate = useCallback((v: View) => setView(v), []);
   const goHome = useCallback(() => setView('home'), []);
   const handleSelectClass = useCallback((level: ClassLevel) => {
@@ -278,10 +272,10 @@ function App() {
             harakatLearned={harakatLearned}
             onToggleHarakat={toggleHarakat}
             onMarkHarakat={markHarakat}
-            letterSoundPracticeLearned={letterSoundPracticeLearned}
-            onMarkLetterSoundPractice={markLetterSoundPractice}
             readingPracticeLearned={readingPracticeLearned}
             onMarkReadingPractice={markReadingPractice}
+            interactiveHarakatPracticeLearned={interactiveHarakatPracticeLearned}
+            onMarkInteractiveHarakatPractice={markInteractiveHarakatPractice}
             sukoonLearned={sukoonLearned}
             onToggleSukoon={toggleSukoon}
             tanweenLearned={tanweenLearned}
@@ -303,22 +297,6 @@ function App() {
           />
         )}
         {selectedClass && view === 'score' && <ScoreView onHome={goHome} score={data} onReset={resetEverything} />}
-        {selectedClass && view === 'teacher' && (
-          <TeacherView
-            onHome={goHome}
-            score={data}
-            onReset={resetEverything}
-            isLoggedIn={isLoggedIn}
-            hasAccount={hasAccount}
-            username={username}
-            onLogin={login}
-            onLogout={logout}
-            onCreateAccount={createAccount}
-            onUpdateCredentials={updateCredentials}
-            curriculum={curriculum}
-            learningProgress={{ learned, harakatLearned, sukoonLearned, tanweenLearned, wordsLearned }}
-          />
-        )}
       </main>
       {selectedClass && view !== 'home' && <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} />}
     </div>

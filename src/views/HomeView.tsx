@@ -43,6 +43,32 @@ export function HomeView({
         : 'Full advanced pathway with all learning sets and activities.';
 
   const cardStyles = [theme.card1, theme.card2, theme.card3, theme.card1];
+  const dashboardCards = [
+    {
+      title: 'Continue Learning',
+      value: selectedClass === 1 ? 'Letters' : selectedClass === 2 ? 'Harakat & Reading' : 'Advanced Sets',
+      detail: selectedClass === 1 ? 'Keep practicing Arabic letters.' : selectedClass === 2 ? 'Move through structured Class 2 learning.' : 'Explore the full advanced pathway.',
+      tint: theme.card1,
+    },
+    {
+      title: 'Learning Progress',
+      value: `${Math.min(100, Math.round((score.writingCompleted / Math.max(score.quizTotal, 1)) * 100))}%`,
+      detail: `${score.writingCompleted} of ${score.quizTotal} letters explored`,
+      tint: theme.card2,
+    },
+    {
+      title: 'Completed Activities',
+      value: `${score.bestQuizScore}/${score.quizTotal}`,
+      detail: 'Best quiz score saved so far',
+      tint: theme.card3,
+    },
+    {
+      title: 'Current Set',
+      value: selectedClass === 1 ? 'Set 1' : selectedClass === 2 ? 'Set 2' : 'Set 5',
+      detail: selectedClass === 1 ? 'Individual letters focus' : selectedClass === 2 ? 'Harakat and reading practice' : 'Advanced activities',
+      tint: 'linear-gradient(135deg, rgba(255,255,255,0.24), rgba(255,255,255,0.14))',
+    },
+  ];
   const appearanceOptions: { mode: AppearanceMode; label: string; description: string }[] = [
     { mode: 'light', label: 'Light', description: 'Always light' },
     { mode: 'dark', label: 'Dark', description: 'Always dark' },
@@ -190,6 +216,20 @@ export function HomeView({
         </div>
       </div>
 
+      <div className="mt-5 grid gap-3 md:grid-cols-4 md:gap-4">
+        {dashboardCards.map(({ title, value, detail, tint }, index) => (
+          <div
+            key={title}
+            className="home-reveal rounded-[1.35rem] p-4 shadow-md shadow-primary-900/10 ring-1 ring-white/40"
+            style={{ background: tint, animationDelay: `${140 + index * 70}ms` }}
+          >
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/80">{title}</p>
+            <p className="mt-3 text-2xl font-black text-white">{value}</p>
+            <p className="mt-1 text-xs text-white/80">{detail}</p>
+          </div>
+        ))}
+      </div>
+
       {/* Feature cards */}
       <div className="mt-5 grid grid-cols-2 gap-3 md:mt-7 md:grid-cols-3 md:gap-4">
         {cards.map(({ view, label, desc, icon: Icon, featured }, index) => (
@@ -274,22 +314,6 @@ export function HomeView({
           </span>
         </button>
 
-        <button
-          onClick={() => onNavigate('teacher')}
-          className="interactive-card flex w-full items-center justify-between gap-3 rounded-[1.4rem] p-4 text-primary-900 shadow-sm hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] md:px-5"
-          style={{ borderColor: theme.border, background: theme.surface, color: theme.text, animationDelay: '420ms' }}
-        >
-        <span className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: theme.accentSoft, color: theme.primaryStrong }}>
-            <GraduationCap size={22} />
-          </span>
-          <span className="flex flex-col items-start leading-tight">
-            <span className="text-base font-bold">Teacher Mode</span>
-            <span className="text-xs" style={{ color: theme.muted }}>View student progress</span>
-          </span>
-        </span>
-        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: theme.primaryStrong }}>For educators</span>
-        </button>
       </div>
 
       {/* Footer */}

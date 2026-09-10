@@ -254,7 +254,7 @@ export function HomeView({
         ))}
       </div>
 
-      <div className="home-reveal mt-3 flex flex-col gap-3 md:mt-4">
+      <div className="mt-3 flex flex-col gap-3 md:mt-4">
         <div className="liquid-panel rounded-[1.4rem] p-3 shadow-sm" style={{ border: `1px solid ${theme.border}`, background: theme.surface }}>
           <div className="mb-2 flex items-center justify-between gap-3">
             <div>
@@ -288,32 +288,6 @@ export function HomeView({
             })}
           </div>
         </div>
-
-        <button
-          onClick={onToggleSuperAdminMode}
-          className={`flex items-center justify-between gap-3 rounded-[1.4rem] p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98] ${
-            isSuperAdminMode
-              ? 'border border-yellow-300 bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-900'
-              : 'border border-primary-100 bg-white/90 text-primary-900'
-          }`}
-          style={{ borderColor: isSuperAdminMode ? '#facc15' : theme.border, background: isSuperAdminMode ? 'linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%)' : theme.surface, color: theme.text }}
-        >
-          <span className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 text-lg shadow-sm">
-              👑
-            </span>
-            <span className="flex flex-col items-start leading-tight">
-              <span className="text-base font-bold">{isSuperAdminMode ? 'Super Admin Test Mode Active' : 'Super Admin Test Mode'}</span>
-              <span className="text-xs" style={{ color: isSuperAdminMode ? '#78350f' : theme.muted }}>
-                {isSuperAdminMode ? 'Temporary developer mode is enabled' : 'Enable temporary testing access'}
-              </span>
-            </span>
-          </span>
-          <span className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]" style={{ background: isSuperAdminMode ? '#facc15' : theme.accentSoft, color: isSuperAdminMode ? '#78350f' : theme.primaryStrong }}>
-            {isSuperAdminMode ? 'ON' : 'OFF'}
-          </span>
-        </button>
-
       </div>
 
       {/* Footer */}

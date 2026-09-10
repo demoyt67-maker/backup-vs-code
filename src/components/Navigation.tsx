@@ -1,5 +1,6 @@
-import { Home, BookOpen, PenTool, BarChart3 } from 'lucide-react';
+import { Home, BookOpen, PenTool, BarChart3, Settings, LogOut } from 'lucide-react';
 import type { View } from '@/types';
+import { useAuth } from '@/hooks/useAuth';
 
 interface NavItem {
   view: View;
@@ -12,12 +13,14 @@ const items: NavItem[] = [
   { view: 'learn', label: 'Learn', icon: BookOpen },
   { view: 'writing', label: 'Writing', icon: PenTool },
   { view: 'score', label: 'Score', icon: BarChart3 },
+  { view: 'settings', label: 'Settings', icon: Settings },
 ];
 
 const topItems: NavItem[] = [
   { view: 'home', label: 'Home', icon: Home },
   { view: 'learn', label: 'Learn', icon: BookOpen },
   { view: 'score', label: 'Score', icon: BarChart3 },
+  { view: 'settings', label: 'Settings', icon: Settings },
 ];
 
 interface Props {
@@ -91,12 +94,14 @@ type TopNavProps = Props;
 
 export function TopNav({ current, onNavigate, theme, selectedClass = 1 }: TopNavProps) {
   const visibleItems: NavItem[] = topItems;
+  const { user, loading, logout } = useAuth();
+
   return (
     <header
       className="fixed inset-x-0 top-0 z-40 hidden border-b border-white/30 bg-white/70 backdrop-blur-xl md:block"
       style={{ borderColor: theme?.border ?? 'rgba(11,66,57,0.12)' }}
     >
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
+    <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
         <button
           onClick={() => onNavigate('home')}
           className="flex items-center gap-2.5 transition-transform hover:-translate-y-0.5 active:scale-95"
@@ -142,6 +147,35 @@ export function TopNav({ current, onNavigate, theme, selectedClass = 1 }: TopNav
             );
           })}
         </nav>
+        <div className="flex items-center">
+          {loading ? (
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+            </div>
+          ) : user ? (
+            <div className="flex items-center gap-2">
+              <div className="hidden items-center gap-2 rounded-full border border-white/30 bg-white/70 px-3 py-1.5 text-sm font-medium md:flex" style={{ color: theme?.text ?? '#0b4239' }}>
+                <span className="max-w-[100px] truncate">{user.user_metadata?.full_name || user.email || 'User'}</span>
+                <button
+                  onClick={logout}
+                  className="rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                  aria-label="Logout"
+                  title="Logout"
+                >
+                  <LogOut size={14} />
+                </button>
+              </div>
+              <button
+                onClick={logout}
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200"
+                aria-label="Logout"
+                title="Logout"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
     </header>
   );

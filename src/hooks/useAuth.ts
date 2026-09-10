@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, signInWithGoogle, signOut, onAuthStateChange } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 
+const AUTH_TIMEOUT_MS = 4000;
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
@@ -10,6 +12,15 @@ export function useAuth() {
 
   useEffect(() => {
     let subscription: { unsubscribe: () => void } | null = null;
+    let mounted = true;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const finishInit = () => {
+      if (mounted) {
+        setLoading(false);
+        setInitialized(true);
+      }
+    };
 
     const fetchRole = async (userId: string | undefined) => {
       if (!userId) {
@@ -17,41 +28,78 @@ export function useAuth() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', userId)
+          .single();
 
-      if (error || !data) {
-        setRole(null);
-        return;
+        if (error || !data) {
+          setRole(null);
+          return;
+        }
+
+        if (mounted) {
+          setRole(data.role);
+        }
+      } catch {
+        if (mounted) {
+          setRole(null);
+        }
       }
-
-      setRole(data.role);
     };
 
-    const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      await fetchRole(currentUser?.id);
-      setLoading(false);
-      setInitialized(true);
+    const init = async () => {
+      timeoutId = setTimeout(() => {
+        if (mounted) {
+          setUser(null);
+          setRole(null);
+          finishInit();
+        }
+      }, AUTH_TIMEOUT_MS);
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const currentUser = session?.user ?? null;
+
+        if (mounted) {
+          setUser(currentUser);
+          await fetchRole(currentUser?.id);
+        }
+      } catch (error) {
+        console.error('Auth init error:', error);
+        if (mounted) {
+          setUser(null);
+          setRole(null);
+        }
+      } finally {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        finishInit();
+      }
     };
 
-    getInitialSession();
+    init();
 
     const { data: { subscription: sub } } = onAuthStateChange(async (event, session) => {
       const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      await fetchRole(currentUser?.id);
-      setLoading(false);
+
+      if (mounted) {
+        setUser(currentUser);
+        await fetchRole(currentUser?.id);
+        finishInit();
+      }
     });
 
     subscription = sub;
 
     return () => {
+      mounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       if (subscription) {
         subscription.unsubscribe();
       }

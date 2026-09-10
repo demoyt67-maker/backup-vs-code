@@ -7,6 +7,7 @@ import { LearnView } from '@/views/LearnView';
 import { WritingView } from '@/views/WritingView';
 import { ScoreView } from '@/views/ScoreView';
 import { SettingsView } from '@/views/SettingsView';
+import { SuperAdminView } from '@/views/SuperAdminView';
 import { useScoreStore } from '@/hooks/useScoreStore';
 import { useLearningProgress } from '@/hooks/useLearningProgress';
 import { useAuth } from '@/hooks/useAuth';
@@ -383,8 +384,16 @@ function App() {
             onToggleSuperAdminMode={toggleSuperAdminMode}
           />
         )}
+        {selectedClass && view === 'superAdmin' && isSuperAdmin && isSuperAdminMode && (
+          <SuperAdminView
+            onNavigate={navigate}
+            theme={selectedTheme}
+          />
+        )}
       </main>
-      {selectedClass && view !== 'home' && view !== 'settings' && <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} />}
+      {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && (
+        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} />
+      )}
     </div>
   );
 }

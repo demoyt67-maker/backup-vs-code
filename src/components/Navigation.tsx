@@ -1,4 +1,4 @@
-import { Home, BookOpen, PenTool, BarChart3, Settings, LogOut } from 'lucide-react';
+import { Home, BookOpen, PenTool, BarChart3, Settings, Shield, LogOut } from 'lucide-react';
 import type { View } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -8,7 +8,7 @@ interface NavItem {
   icon: typeof Home;
 }
 
-const items: NavItem[] = [
+const baseItems: NavItem[] = [
   { view: 'home', label: 'Home', icon: Home },
   { view: 'learn', label: 'Learn', icon: BookOpen },
   { view: 'writing', label: 'Writing', icon: PenTool },
@@ -16,7 +16,7 @@ const items: NavItem[] = [
   { view: 'settings', label: 'Settings', icon: Settings },
 ];
 
-const topItems: NavItem[] = [
+const baseTopItems: NavItem[] = [
   { view: 'home', label: 'Home', icon: Home },
   { view: 'learn', label: 'Learn', icon: BookOpen },
   { view: 'score', label: 'Score', icon: BarChart3 },
@@ -41,6 +41,9 @@ interface Props {
 }
 
 export function BottomNav({ current, onNavigate, theme, selectedClass = 1 }: Props) {
+  const { isSuperAdmin } = useAuth();
+  const adminItem: NavItem = { view: 'superAdmin', label: 'Admin', icon: Shield };
+  const items: NavItem[] = isSuperAdmin ? [...baseItems, adminItem] : baseItems;
   const visibleItems: NavItem[] = selectedClass === 1 ? items : items.filter((item) => item.view !== 'writing');
 
   return (
@@ -93,8 +96,10 @@ export function BottomNav({ current, onNavigate, theme, selectedClass = 1 }: Pro
 type TopNavProps = Props;
 
 export function TopNav({ current, onNavigate, theme, selectedClass = 1 }: TopNavProps) {
+  const { isSuperAdmin, user, loading, logout } = useAuth();
+  const adminItem: NavItem = { view: 'superAdmin', label: 'Admin', icon: Shield };
+  const topItems: NavItem[] = isSuperAdmin ? [...baseTopItems, adminItem] : baseTopItems;
   const visibleItems: NavItem[] = topItems;
-  const { user, loading, logout } = useAuth();
 
   return (
     <header

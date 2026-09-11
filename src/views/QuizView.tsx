@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Check, X, RotateCcw, Home, ArrowRight, Trophy } from 'lucide-react';
 import { ARABIC_LETTERS, TOTAL_LETTERS, type ArabicLetter } from '@/data/letters';
 import { BackHeader } from '@/components/BackHeader';
+import { useCMSClass1Data } from '@/hooks/useCMSClass1Data';
 
 interface Props {
   onHome: () => void;
@@ -32,7 +33,10 @@ const QUESTION_LIMITS: Record<1 | 2 | 3, number> = {
 };
 
 export function QuizView({ onHome, onFinish, selectedClass }: Props) {
-  const questionPool = useMemo(() => ARABIC_LETTERS.slice(0, QUESTION_LIMITS[selectedClass]), [selectedClass]);
+  const cms = useCMSClass1Data();
+  const class1Letters = selectedClass === 1 && cms.usingCMS ? cms.letters : ARABIC_LETTERS;
+  const class1Limit = selectedClass === 1 && cms.usingCMS ? class1Letters.length : QUESTION_LIMITS[selectedClass];
+  const questionPool = useMemo(() => class1Letters.slice(0, class1Limit), [selectedClass, class1Letters, class1Limit]);
   const questions = useMemo(() => shuffle(questionPool), [questionPool]);
   const [qIndex, setQIndex] = useState(0);
   const [score, setScore] = useState(0);

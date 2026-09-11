@@ -8,6 +8,7 @@ import { WritingView } from '@/views/WritingView';
 import { ScoreView } from '@/views/ScoreView';
 import { SettingsView } from '@/views/SettingsView';
 import { SuperAdminView } from '@/views/SuperAdminView';
+import { CMSView } from '@/views/CMSView';
 import { useScoreStore } from '@/hooks/useScoreStore';
 import { useLearningProgress } from '@/hooks/useLearningProgress';
 import { useAuth } from '@/hooks/useAuth';
@@ -390,8 +391,14 @@ function App() {
             theme={selectedTheme}
           />
         )}
+        {selectedClass && view === 'cms' && isSuperAdmin && isSuperAdminMode && (
+          <CMSView
+            onNavigate={navigate}
+            theme={selectedTheme}
+          />
+        )}
       </main>
-      {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && (
+      {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'cms' && (
         <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} />
       )}
     </div>

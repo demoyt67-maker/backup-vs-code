@@ -10,6 +10,7 @@ import {
   type StrokePoint,
   type TargetMask,
 } from '@/lib/tracingValidation';
+import { useCMSClass1Data } from '@/hooks/useCMSClass1Data';
 
 interface Props {
   onHome: () => void;
@@ -29,7 +30,10 @@ const LETTER_LIMITS: Record<1 | 2 | 3, number> = {
 };
 
 export function WritingView({ onHome, startLetter, onProgress, selectedClass }: Props) {
-  const maxLetters = LETTER_LIMITS[selectedClass];
+  const cms = useCMSClass1Data();
+  const activeLetters = selectedClass === 1 && cms.usingCMS ? cms.letters : ARABIC_LETTERS;
+  const activeTotal = activeLetters.length;
+  const maxLetters = selectedClass === 1 ? activeTotal : LETTER_LIMITS[selectedClass];
   const [letterIdx, setLetterIdx] = useState(() => Math.max(0, Math.min(maxLetters - 1, startLetter - 1)));
   const [completed, setCompleted] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -38,7 +42,7 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
   const [traceProgress, setTraceProgress] = useState(0);
   const [showRestart, setShowRestart] = useState(false);
 
-  const current = ARABIC_LETTERS[letterIdx];
+  const current = activeLetters[letterIdx];
 
   // Refs
   const guideCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -350,10 +354,10 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
 
     window.requestAnimationFrame(() => {
       const { w, h } = sizeRef.current;
-      drawGuide(ARABIC_LETTERS[nextIdx].arabic, w, h);
+      drawGuide(activeLetters[nextIdx].arabic, w, h);
       if (guide) rebuildMask(guide, w, h);
     });
-  }, [completed, drawGuide, letterIdx, maxLetters, rebuildMask]);
+  }, [completed, drawGuide, letterIdx, maxLetters, rebuildMask, activeLetters]);
 
   const handleRestartLevel = useCallback(() => {
     setShowRestart(false);
@@ -379,10 +383,10 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
     setTraceProgress(0);
     window.requestAnimationFrame(() => {
       const { w, h } = sizeRef.current;
-      drawGuide(ARABIC_LETTERS[0].arabic, w, h);
+      drawGuide(activeLetters[0].arabic, w, h);
       if (guide) rebuildMask(guide, w, h);
     });
-  }, [drawGuide, rebuildMask]);
+  }, [drawGuide, rebuildMask, activeLetters]);
 
   // completion screen
   if (allDone) {
@@ -415,7 +419,7 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
                 pointsRef.current = [];
                 window.requestAnimationFrame(() => {
                   const { w, h } = sizeRef.current;
-                  drawGuide(ARABIC_LETTERS[0].arabic, w, h);
+                  drawGuide(activeLetters[0].arabic, w, h);
                   const guide = guideCanvasRef.current;
                   if (guide) rebuildMask(guide, w, h);
                 });
@@ -443,16 +447,16 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
       {/* progress */}
       <div className="mb-3 flex items-center justify-between">
         <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-bold text-primary-700">
-          Letter {letterIdx + 1} of {TOTAL_LETTERS}
+          Letter {letterIdx + 1} of {activeTotal}
         </span>
         <span className="rounded-full bg-gold-50 px-3 py-1 text-xs font-bold text-gold-700">
-          {completedCount}/28 done
+          {completedCount}/{activeTotal} done
         </span>
       </div>
       <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-primary-100">
         <div
           className="h-full rounded-full bg-gradient-to-r from-gold-400 to-gold-600 transition-all duration-300"
-          style={{ width: `${((letterIdx + (completed ? 1 : 0)) / TOTAL_LETTERS) * 100}%` }}
+          style={{ width: `${((letterIdx + (completed ? 1 : 0)) / activeTotal) * 100}%` }}
         />
       </div>
 

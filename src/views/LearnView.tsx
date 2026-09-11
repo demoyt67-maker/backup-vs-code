@@ -34,6 +34,7 @@ import {
   type SetId,
 } from '@/data/learningSets';
 import { TOTAL_LETTERS, type ArabicLetter } from '@/data/letters';
+import { useCMSClass1Data } from '@/hooks/useCMSClass1Data';
 
 interface Props {
   onHome: () => void;
@@ -104,13 +105,18 @@ export function LearnView({
   onResetLearning,
   isSuperAdminMode,
 }: Props) {
+  const cms = useCMSClass1Data();
+  const cmsLevels = cms.usingCMS ? cms.levels : SET1_LEVELS;
+  const cmsLetters = cms.usingCMS ? cms.letters : ARABIC_LETTERS;
+  const set1TotalLetters = cmsLetters.length;
+
   const availableSets = AVAILABLE_SETS_BY_CLASS[selectedClass];
   const [openSet, setOpenSet] = useState<SetId>(availableSets[0]);
   const [openLevel, setOpenLevel] = useState<number | null>(1);
   const [set1LetterIndexesByLevel, setSet1LetterIndexesByLevel] = useState<Record<number, number>>({});
 
   // ----- Completion checks -----
-  const set1Complete = learned.size >= TOTAL_LETTERS;
+  const set1Complete = learned.size >= set1TotalLetters;
   const set2Complete = SET2_REQUIRED_KEYS.every((key) => harakatLearned.has(key));
   const readingPracticeCompletedCount = SIMPLE_READING_PRACTICE_ITEMS.filter((item) => readingPracticeLearned.has(item.id)).length;
   const interactiveHarakatPracticeCompletedCount = interactiveHarakatPracticeLearned.size;
@@ -133,7 +139,7 @@ export function LearnView({
   const isSet1LevelUnlocked = (level: number): boolean => {
     if (isSuperAdminMode) return true;
     if (level === 1) return true;
-    const prev = SET1_LEVELS[level - 2];
+    const prev = cmsLevels[level - 2];
     return prev.letters.every((l) => learned.has(l.index));
   };
 
@@ -341,17 +347,17 @@ export function LearnView({
         <>
           <SetSummaryHeader
             title={SET1_TITLE}
-            subtitle={`${SET1_TOTAL_LEVELS} levels • 4 letters each`}
-            count={`${learned.size}/28`}
+            subtitle={`${cmsLevels.length} levels • ${cmsLevels[0]?.letters.length ?? 4} letters each`}
+            count={`${learned.size}/${set1TotalLetters}`}
             countLabel="Letters learned"
             gradient="from-primary-700 to-primary-950"
             barColor="from-gold-400 to-gold-500"
-            pct={(learned.size / 28) * 100}
+            pct={(learned.size / set1TotalLetters) * 100}
             icon={<BookOpen size={24} />}
-            hint={!set1Complete ? `Complete all 28 letters to unlock ${SET2_TITLE}` : undefined}
+            hint={!set1Complete ? `Complete all ${set1TotalLetters} letters to unlock ${SET2_TITLE}` : undefined}
           />
           <div className="space-y-3">
-            {SET1_LEVELS.map(({ level, letters }) => {
+            {cmsLevels.map(({ level, letters }) => {
               const unlocked = isSet1LevelUnlocked(level);
               const completed = set1LevelCompletedCount(letters);
               const allDone = completed === letters.length;
@@ -390,7 +396,7 @@ export function LearnView({
                     <div className="rounded-[1.75rem] bg-gradient-to-br from-primary-50 via-white to-teal-50 p-4 ring-1 ring-primary-100">
                       <div className="flex flex-col items-center text-center">
                         <div className="mb-3 inline-flex items-center rounded-full bg-primary-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.24em] text-primary-700">
-                          Letter {currentLetter.index} of 28
+                          Letter {currentLetter.index} of {set1TotalLetters}
                         </div>
 
                         <span className="font-arabic text-[7rem] leading-none text-primary-900 drop-shadow-[0_10px_24px_rgba(13,82,74,0.18)] sm:text-[8rem]">

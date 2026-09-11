@@ -9,30 +9,38 @@ interface Props {
 }
 
 export function SuperAdminView({ onNavigate, theme }: Props) {
+  const handleContentManagement = () => {
+    onNavigate('cms');
+  };
+
   const cards = [
     {
       title: 'User Management',
       description: 'View and manage user accounts, roles, and permissions.',
       icon: '👥',
       status: 'Coming Soon',
+      onClick: undefined as (() => void) | undefined,
     },
     {
       title: 'Content Management',
       description: 'Manage Arabic letters, words, images, and learning content.',
       icon: '📚',
-      status: 'Coming Soon',
+      status: 'Open CMS',
+      onClick: handleContentManagement,
     },
     {
       title: 'Analytics & Reports',
       description: 'View learning progress, quiz results, and app usage statistics.',
       icon: '📊',
       status: 'Coming Soon',
+      onClick: undefined as (() => void) | undefined,
     },
     {
       title: 'System Settings',
       description: 'Configure app settings, themes, and global preferences.',
       icon: '⚙️',
       status: 'Coming Soon',
+      onClick: undefined as (() => void) | undefined,
     },
   ];
 
@@ -46,32 +54,39 @@ export function SuperAdminView({ onNavigate, theme }: Props) {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {cards.map((card, index) => (
-          <div
-            key={card.title}
-            className="liquid-panel rounded-[1.4rem] p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-            style={{
-              border: `1px solid ${theme.border}`,
-              background: theme.surface,
-              animationDelay: `${index * 80}ms`,
-            }}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl" style={{ background: theme.accentSoft }}>
-                  {card.icon}
-                </span>
-                <div>
-                  <h3 className="text-base font-bold text-primary-900">{card.title}</h3>
-                  <p className="mt-1 text-xs text-primary-700">{card.description}</p>
+        {cards.map((card, index) => {
+          const isCMS = card.title === 'Content Management';
+          return (
+            <div
+              key={card.title}
+              onClick={card.onClick}
+              className={`liquid-panel rounded-[1.4rem] p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${isCMS ? 'cursor-pointer' : ''}`}
+              style={{
+                border: `1px solid ${theme.border}`,
+                background: theme.surface,
+                animationDelay: `${index * 80}ms`,
+              }}
+              role={isCMS ? 'button' : undefined}
+              tabIndex={isCMS ? 0 : undefined}
+              onKeyDown={isCMS ? (e) => { if (e.key === 'Enter' || e.key === ' ') card.onClick?.(); } : undefined}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl" style={{ background: theme.accentSoft }}>
+                    {card.icon}
+                  </span>
+                  <div>
+                    <h3 className="text-base font-bold text-primary-900">{card.title}</h3>
+                    <p className="mt-1 text-xs text-primary-700">{card.description}</p>
+                  </div>
                 </div>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isCMS ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                  {card.status}
+                </span>
               </div>
-              <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                {card.status}
-              </span>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-8 rounded-[1.4rem] border border-yellow-200 bg-yellow-50/50 p-4">

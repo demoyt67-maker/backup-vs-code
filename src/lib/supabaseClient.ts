@@ -5,9 +5,10 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables');
+  throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(supabaseUrl as string, supabaseAnonKey as string);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithOAuth({

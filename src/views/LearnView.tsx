@@ -9,6 +9,7 @@ import { getLetterIllustrationMeta, getLetterIllustrationUrl } from '@/data/lett
 import { WordLearnLevel, WordMatchingLevel, WordMultipleChoiceLevel, WordMemoryLevel, WordMixedChallengeLevel } from '@/components/WordActivities';
 import {
   SET1_LEVELS,
+  SET1_LEVEL_SIZE,
   SET1_TITLE,
   SET1_TOTAL_LEVELS,
   SET2_LEVELS,
@@ -33,7 +34,7 @@ import {
   type HarakatLevel,
   type SetId,
 } from '@/data/learningSets';
-import { TOTAL_LETTERS, type ArabicLetter } from '@/data/letters';
+import { ARABIC_LETTERS, TOTAL_LETTERS, type ArabicLetter } from '@/data/letters';
 import { useCMSClass1Data } from '@/hooks/useCMSClass1Data';
 
 interface Props {
@@ -106,8 +107,8 @@ export function LearnView({
   isSuperAdminMode,
 }: Props) {
   const cms = useCMSClass1Data();
-  const cmsLevels = cms.usingCMS ? cms.levels : SET1_LEVELS;
-  const cmsLetters = cms.usingCMS ? cms.letters : ARABIC_LETTERS;
+  const cmsLevels = (cms.usingCMS && cms.levels.length > 0) ? cms.levels : SET1_LEVELS;
+  const cmsLetters = (cms.usingCMS && cms.letters.length > 0) ? cms.letters : ARABIC_LETTERS;
   const set1TotalLetters = cmsLetters.length;
 
   const availableSets = AVAILABLE_SETS_BY_CLASS[selectedClass];
@@ -357,13 +358,14 @@ export function LearnView({
             hint={!set1Complete ? `Complete all ${set1TotalLetters} letters to unlock ${SET2_TITLE}` : undefined}
           />
           <div className="space-y-3">
-            {cmsLevels.map(({ level, letters }) => {
+            {cmsLevels.map(({ level, letters: levelLetters }) => {
+              const letters = levelLetters.length > 0 ? levelLetters : ARABIC_LETTERS.slice(0, SET1_LEVEL_SIZE);
               const unlocked = isSet1LevelUnlocked(level);
               const completed = set1LevelCompletedCount(letters);
               const allDone = completed === letters.length;
               const isOpen = openLevel === level && unlocked;
               const currentLetterIndex = set1LetterIndexesByLevel[level] ?? 0;
-              const currentLetter = letters[currentLetterIndex] ?? letters[0];
+              const currentLetter = letters[currentLetterIndex] ?? letters[0] ?? ARABIC_LETTERS[0];
               const currentVisual = getLetterIllustrationMeta(currentLetter);
 
               const moveLetter = (direction: number) => {
@@ -399,23 +401,27 @@ export function LearnView({
                           Letter {currentLetter.index} of {set1TotalLetters}
                         </div>
 
-                        <span className="font-arabic text-[7rem] leading-none text-primary-900 drop-shadow-[0_10px_24px_rgba(13,82,74,0.18)] sm:text-[8rem]">
-                          {currentLetter.arabic}
-                        </span>
+                        <div className="mb-6 flex items-center justify-center">
+                          <span className="font-arabic text-[7rem] leading-none text-primary-900 drop-shadow-[0_10px_24px_rgba(13,82,74,0.18)] sm:text-[8rem]">
+                            {currentLetter.arabic}
+                          </span>
+                        </div>
 
-                        <p className="mt-3 font-arabic text-[2.5rem] leading-tight text-primary-800 sm:text-[3rem]">
+                        <p className="mt-4 font-arabic text-[2.5rem] leading-tight text-primary-800 sm:text-[3rem]">
                           {currentVisual.arabicObjectName}
                         </p>
 
-                        <p className="mt-1 text-lg font-bold text-primary-700">{currentVisual.label}</p>
+                        <p className="mt-2 text-lg font-bold text-primary-700">{currentVisual.label}</p>
                       </div>
 
-                      <div className="mt-4 overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-primary-50 to-white p-1.5 shadow-inner ring-1 ring-primary-100">
-                        <img
-                          src={getLetterIllustrationUrl(currentLetter)}
-                          alt={`${currentVisual.label} illustration`}
-                          className="mx-auto h-[180px] w-full max-w-[260px] rounded-[1.2rem] object-contain sm:h-[200px] sm:max-w-[280px]"
-                        />
+                      <div className="mx-auto mt-5 max-w-[260px] sm:max-w-[280px]">
+                        <div className="overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-primary-50 to-white p-1.5 shadow-inner ring-1 ring-primary-100">
+                          <img
+                            src={getLetterIllustrationUrl(currentLetter)}
+                            alt={`${currentVisual.label} illustration`}
+                            className="h-auto w-full rounded-[1.2rem] object-contain"
+                          />
+                        </div>
                       </div>
 
                       <div className="mt-4">

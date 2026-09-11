@@ -8,6 +8,7 @@ import { WritingView } from '@/views/WritingView';
 import { ScoreView } from '@/views/ScoreView';
 import { SettingsView } from '@/views/SettingsView';
 import { SuperAdminView } from '@/views/SuperAdminView';
+import { FeatureControlView } from '@/views/FeatureControlView';
 import { CMSView } from '@/views/CMSView';
 import { useScoreStore } from '@/hooks/useScoreStore';
 import { useLearningProgress } from '@/hooks/useLearningProgress';
@@ -260,6 +261,25 @@ function App() {
     return () => mediaQuery.removeListener(handleChange);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const path = window.location.pathname;
+
+    if (path !== '/auth/callback') return;
+
+    if (!initialized || loading) {
+      return;
+    }
+
+    if (user) {
+      window.history.replaceState(null, '', '/');
+      setView('home');
+    } else {
+      window.history.replaceState(null, '', '/');
+    }
+  }, [initialized, loading, user]);
+
   const currentClassOnSelection = selectedClass ?? loadSelectedClass();
   const effectiveAppearance = getEffectiveAppearance(appearanceMode, systemPrefersDark);
   const selectedTheme: Theme = useMemo(
@@ -319,7 +339,7 @@ function App() {
         transition: 'background-color 500ms ease, color 500ms ease, border-color 500ms ease, box-shadow 500ms ease, background 500ms ease',
       }}
     >
-      <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} />
+      <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} />
       <main className="md:pt-0">
         {!selectedClass && <ClassSelectionScreen onSelect={handleSelectClass} currentClass={currentClassOnSelection} />}
         {selectedClass && view === 'home' && (
@@ -383,10 +403,18 @@ function App() {
             isSuperAdmin={isSuperAdmin}
             isSuperAdminMode={isSuperAdminMode}
             onToggleSuperAdminMode={toggleSuperAdminMode}
+            appearanceMode={appearanceMode}
+            onChangeAppearanceMode={updateAppearanceMode}
           />
         )}
         {selectedClass && view === 'superAdmin' && isSuperAdmin && isSuperAdminMode && (
           <SuperAdminView
+            onNavigate={navigate}
+            theme={selectedTheme}
+          />
+        )}
+        {selectedClass && view === 'featureControl' && isSuperAdmin && isSuperAdminMode && (
+          <FeatureControlView
             onNavigate={navigate}
             theme={selectedTheme}
           />
@@ -398,8 +426,8 @@ function App() {
           />
         )}
       </main>
-      {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'cms' && (
-        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} />
+      {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'cms' && (
+        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} />
       )}
     </div>
   );

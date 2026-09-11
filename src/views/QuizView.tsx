@@ -45,6 +45,24 @@ export function QuizView({ onHome, onFinish, selectedClass }: Props) {
   const [choices, setChoices] = useState<ArabicLetter[]>(() => buildChoices(questions[0], questionPool));
   const [finished, setFinished] = useState(false);
 
+  if (questions.length === 0) {
+    return (
+      <div className="screen-shell mx-auto max-w-2xl animate-fade-in px-4 pb-28 pt-6 md:pb-12 md:pt-24">
+        <BackHeader title="Arabic Quiz" onBack={onHome} />
+        <div className="screen-panel liquid-panel relative z-10 rounded-[2rem] bg-[#fffdf8] p-8 text-center shadow-sm ring-1 ring-primary-100">
+          <p className="text-lg font-bold text-primary-900">No questions available right now.</p>
+          <p className="mt-2 text-sm text-primary-700">Please try again later or contact your teacher.</p>
+          <button
+            onClick={onHome}
+            className="mt-6 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-700 px-5 py-3 font-bold text-white shadow-md transition-all hover:shadow-lg active:scale-95"
+          >
+            <Home size={18} /> Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const current = questions[qIndex];
   const isCorrectPick = selected === current.arabic;
 

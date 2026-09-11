@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { View } from '@/types';
 import { CLASS_THEMES } from '@/theme';
 import { ArrowLeft, Plus, Pencil, Trash2 } from 'lucide-react';
@@ -241,9 +241,14 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
+  const cancelledRef = useRef(false);
 
   useEffect(() => {
+    cancelledRef.current = false;
     loadLessons();
+    return () => {
+      cancelledRef.current = true;
+    };
   }, []);
 
   async function loadLessons() {
@@ -257,7 +262,12 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
         .eq('class_level', 1)
         .order('sort_order', { ascending: true });
 
+      if (cancelledRef.current) return;
+
       if (error || !cmsLessons || cmsLessons.length === 0) {
+        if (error) {
+          setSaveStatus({ type: 'error', message: `Failed to load CMS lessons: ${error.message || 'Unknown error'}` });
+        }
         setLessons(FALLBACK_LESSONS);
         setLoading(false);
         return;
@@ -270,6 +280,8 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
             .select('*')
             .eq('lesson_id', cmsLesson.id)
             .order('position', { ascending: true });
+
+          if (cancelledRef.current) return { id: cmsLesson.lesson_key, title: cmsLesson.title, description: cmsLesson.description || '' };
 
           const fallback = FALLBACK_LESSONS.find((l) => l.id === cmsLesson.lesson_key);
 
@@ -298,16 +310,26 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
         })
       );
 
+      if (cancelledRef.current) return;
+
       setLessons(lessonsWithLetters);
     } catch (err) {
-      setSaveStatus({ type: 'error', message: 'Failed to load CMS data from database' });
-      setLessons(FALLBACK_LESSONS);
+      if (!cancelledRef.current) {
+        setSaveStatus({ type: 'error', message: 'Failed to load CMS data from database' });
+        setLessons(FALLBACK_LESSONS);
+      }
     } finally {
-      setLoading(false);
+      if (!cancelledRef.current) {
+        setLoading(false);
+      }
     }
   }
 
   async function handleSave(lessonId: string, title: string, arabicLetters: string[], englishNames: string[]) {
+    if (arabicLetters.length !== englishNames.length) {
+      throw new Error('Letter count mismatch: Arabic letters and English names must have the same length.');
+    }
+
     const existingLesson = lessons.find((l) => l.id === lessonId);
     const sortOrder = existingLesson ? lessons.indexOf(existingLesson) + 1 : lessons.length + 1;
 
@@ -319,6 +341,7 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
         title,
         description: lettersLabel(arabicLetters.map((a, i) => ({ arabic: a, english: englishNames[i] }))),
         sort_order: sortOrder,
+        is_active: true,
       })
       .select()
       .single();
@@ -327,11 +350,6 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
       throw new Error(error?.message || 'Failed to save lesson');
     }
 
-    await supabase
-      .from('cms_lesson_letters')
-      .delete()
-      .eq('lesson_id', savedLesson.id);
-
     const letterRows = arabicLetters.map((arabic, idx) => ({
       lesson_id: savedLesson.id,
       position: idx + 1,
@@ -339,11 +357,24 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
       english: englishNames[idx],
     }));
 
+    const { data: existingLetters } = await supabase
+      .from('cms_lesson_letters')
+      .select('*')
+      .eq('lesson_id', savedLesson.id);
+
+    await supabase
+      .from('cms_lesson_letters')
+      .delete()
+      .eq('lesson_id', savedLesson.id);
+
     const { error: lettersError } = await supabase
       .from('cms_lesson_letters')
       .insert(letterRows);
 
     if (lettersError) {
+      if (existingLetters && existingLetters.length > 0) {
+        await supabase.from('cms_lesson_letters').insert(existingLetters);
+      }
       throw new Error(lettersError.message || 'Failed to save letters');
     }
 

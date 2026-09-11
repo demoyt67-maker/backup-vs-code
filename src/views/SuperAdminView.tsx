@@ -13,7 +13,18 @@ export function SuperAdminView({ onNavigate, theme }: Props) {
     onNavigate('cms');
   };
 
+  const handleFeatureControl = () => {
+    onNavigate('featureControl');
+  };
+
   const cards = [
+    {
+      title: 'Feature Control',
+      description: 'Enable or disable app features for different classes and roles.',
+      icon: '🎛️',
+      status: 'Open',
+      onClick: handleFeatureControl,
+    },
     {
       title: 'User Management',
       description: 'View and manage user accounts, roles, and permissions.',
@@ -55,20 +66,20 @@ export function SuperAdminView({ onNavigate, theme }: Props) {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {cards.map((card, index) => {
-          const isCMS = card.title === 'Content Management';
+          const isClickable = typeof card.onClick === 'function';
           return (
             <div
               key={card.title}
               onClick={card.onClick}
-              className={`liquid-panel rounded-[1.4rem] p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${isCMS ? 'cursor-pointer' : ''}`}
+              className={`liquid-panel rounded-[1.4rem] p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${isClickable ? 'cursor-pointer' : ''}`}
               style={{
                 border: `1px solid ${theme.border}`,
                 background: theme.surface,
                 animationDelay: `${index * 80}ms`,
               }}
-              role={isCMS ? 'button' : undefined}
-              tabIndex={isCMS ? 0 : undefined}
-              onKeyDown={isCMS ? (e) => { if (e.key === 'Enter' || e.key === ' ') card.onClick?.(); } : undefined}
+              role={isClickable ? 'button' : undefined}
+              tabIndex={isClickable ? 0 : undefined}
+              onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') card.onClick?.(); } : undefined}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -80,7 +91,7 @@ export function SuperAdminView({ onNavigate, theme }: Props) {
                     <p className="mt-1 text-xs text-primary-700">{card.description}</p>
                   </div>
                 </div>
-                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isCMS ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isClickable ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                   {card.status}
                 </span>
               </div>

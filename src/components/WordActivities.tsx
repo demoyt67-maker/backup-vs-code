@@ -139,7 +139,7 @@ export function WordMatchingLevel({
       const next = new Set(matched);
       next.add(word.id);
       setMatched(next);
-      setScore(score + 1);
+      setScore((prev) => prev + 1);
       setSelectedArabic(null);
       setWrongPair(null);
       if (next.size === totalToMatch) {
@@ -321,7 +321,7 @@ export function WordMultipleChoiceLevel({
     setSelected(wordId);
     setShowResult(true);
     if (wordId === target.id) {
-      setScore(score + 1);
+      setScore((prev) => prev + 1);
     }
   };
 
@@ -690,7 +690,7 @@ export function WordMixedChallengeLevel({
       const next = new Set(matched);
       next.add(word.id);
       setMatched(next);
-      setScore(score + 1);
+      setScore((prev) => prev + 1);
       setSelected(null);
       setWrongPair(null);
       if (next.size === currentWords.length) {

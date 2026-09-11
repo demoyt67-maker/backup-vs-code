@@ -69,16 +69,28 @@ export function useCMSClass1Data(): CMSClass1Data {
       try {
         const cached = readCache();
         if (cached) {
-          if (!cancelled) {
-            setLevels(cached.lessons.filter((l) => l.lesson_key.startsWith('set1-level-')).map((l, i) => ({
+          const cachedLevels = cached.lessons
+            .filter((l) => l.lesson_key?.startsWith('set1-level-'))
+            .map((l, i) => ({
               level: i + 1,
               letters: cached.letters,
-            })));
-            setLetters(cached.letters);
-            setUsingCMS(true);
-            setLoading(false);
+            }));
+
+          if (cachedLevels.length > 0 && cached.letters.length > 0) {
+            if (!cancelled) {
+              setLevels(cachedLevels);
+              setLetters(cached.letters);
+              setUsingCMS(true);
+              setLoading(false);
+            }
+            return;
           }
-          return;
+
+          try {
+            localStorage.removeItem(CACHE_KEY);
+          } catch {
+            // ignore
+          }
         }
 
         const { data: cmsLessons, error: lessonsError } = await supabase
@@ -90,6 +102,7 @@ export function useCMSClass1Data(): CMSClass1Data {
 
         if (lessonsError || !cmsLessons || cmsLessons.length === 0) {
           if (!cancelled) {
+            setError(lessonsError ? `Failed to load CMS lessons: ${lessonsError.message}` : 'No active Class 1 lessons found');
             setLevels(SET1_LEVELS);
             setLetters(ARABIC_LETTERS);
             setUsingCMS(false);
@@ -107,6 +120,7 @@ export function useCMSClass1Data(): CMSClass1Data {
 
         if (lettersError || !cmsLetters || cmsLetters.length === 0) {
           if (!cancelled) {
+            setError(lettersError ? `Failed to load CMS letters: ${lettersError.message}` : 'No CMS letters found');
             setLevels(SET1_LEVELS);
             setLetters(ARABIC_LETTERS);
             setUsingCMS(false);
@@ -128,11 +142,22 @@ export function useCMSClass1Data(): CMSClass1Data {
           lettersByLessonId.set(cl.lesson_id, arr);
         }
 
-        const allCMSEntries = cmsLessons.filter((l) => l.lesson_key.startsWith('set1-level-'));
+        const allCMSEntries = cmsLessons.filter((l) => l.lesson_key?.startsWith('set1-level-'));
         const cmsLevels: LetterLevel[] = allCMSEntries.map((l, i) => ({
           level: i + 1,
           letters: lettersByLessonId.get(l.id) ?? [],
         }));
+
+        if (cmsLevels.length === 0 || cmsLevels.some((lvl) => !Array.isArray(lvl.letters) || lvl.letters.length === 0)) {
+          if (!cancelled) {
+            setError('CMS Class 1 data is incomplete or invalid');
+            setLevels(SET1_LEVELS);
+            setLetters(ARABIC_LETTERS);
+            setUsingCMS(false);
+            setLoading(false);
+          }
+          return;
+        }
 
         const allLetters = cmsLevels.flatMap((lvl) => lvl.letters);
         // Deduplicate by arabic character

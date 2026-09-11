@@ -38,12 +38,13 @@ interface Props {
     hero: string;
   };
   selectedClass?: 1 | 2 | 3;
+  isSuperAdminMode?: boolean;
 }
 
-export function BottomNav({ current, onNavigate, theme, selectedClass = 1 }: Props) {
+export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false }: Props) {
   const { isSuperAdmin } = useAuth();
   const adminItem: NavItem = { view: 'superAdmin', label: 'Admin', icon: Shield };
-  const items: NavItem[] = isSuperAdmin ? [...baseItems, adminItem] : baseItems;
+  const items: NavItem[] = isSuperAdmin && isSuperAdminMode ? [...baseItems, adminItem] : baseItems;
   const visibleItems: NavItem[] = selectedClass === 1 ? items : items.filter((item) => item.view !== 'writing');
 
   return (
@@ -95,10 +96,10 @@ export function BottomNav({ current, onNavigate, theme, selectedClass = 1 }: Pro
 
 type TopNavProps = Props;
 
-export function TopNav({ current, onNavigate, theme, selectedClass = 1 }: TopNavProps) {
+export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false }: TopNavProps) {
   const { isSuperAdmin, user, loading, logout } = useAuth();
   const adminItem: NavItem = { view: 'superAdmin', label: 'Admin', icon: Shield };
-  const topItems: NavItem[] = isSuperAdmin ? [...baseTopItems, adminItem] : baseTopItems;
+  const topItems: NavItem[] = isSuperAdmin && isSuperAdminMode ? [...baseTopItems, adminItem] : baseTopItems;
   const visibleItems: NavItem[] = topItems;
 
   return (

@@ -12,7 +12,7 @@ interface Props {
 export function ScoreView({ onHome, score, onReset }: Props) {
   const quizPct = Math.round((score.lastQuizScore / score.quizTotal) * 100) || 0;
   const bestPct = Math.round((score.bestQuizScore / score.quizTotal) * 100) || 0;
-  const writingPct = Math.round((score.writingCompleted / TOTAL_LETTERS) * 100);
+  const writingPct = Math.round((score.writingCompleted / TOTAL_LETTERS) * 100) || 0;
 
   return (
     <div className="screen-shell mx-auto max-w-2xl animate-fade-in px-4 pb-28 pt-6 md:pb-12 md:pt-24">

@@ -49,8 +49,6 @@ export function HarakatPractice({ level, onMark }: Props) {
 
   const info = HARAKAT[question.promptHaraka];
 
-  const next = useMemo(() => buildQuestion(level), [level]);
-
   const handleSelect = (h: HarakaType) => {
     if (answered) return;
     setSelected(h);
@@ -63,7 +61,7 @@ export function HarakatPractice({ level, onMark }: Props) {
   };
 
   const handleNext = () => {
-    setQuestion(next);
+    setQuestion(buildQuestion(level));
     setSelected(null);
     setAnswered(false);
   };

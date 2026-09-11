@@ -9,9 +9,11 @@ interface Props {
   isSuperAdmin: boolean;
   isSuperAdminMode: boolean;
   onToggleSuperAdminMode: () => void;
+  appearanceMode: 'light' | 'dark' | 'system';
+  onChangeAppearanceMode: (mode: 'light' | 'dark' | 'system') => void;
 }
 
-export function SettingsView({ onNavigate, theme, isSuperAdmin, isSuperAdminMode, onToggleSuperAdminMode }: Props) {
+export function SettingsView({ onNavigate, theme, isSuperAdmin, isSuperAdminMode, onToggleSuperAdminMode, appearanceMode, onChangeAppearanceMode }: Props) {
   const appearanceOptions: { mode: 'light' | 'dark' | 'system'; label: string; description: string }[] = [
     { mode: 'light', label: 'Light', description: 'Always light' },
     { mode: 'dark', label: 'Dark', description: 'Always dark' },
@@ -36,11 +38,11 @@ export function SettingsView({ onNavigate, theme, isSuperAdmin, isSuperAdminMode
 
           <div className="grid grid-cols-3 gap-2">
             {appearanceOptions.map(({ mode, label, description }) => {
-              const isActive = mode === 'system';
+              const isActive = mode === appearanceMode;
               return (
                 <button
                   key={mode}
-                  onClick={() => onNavigate('home')}
+                  onClick={() => onChangeAppearanceMode(mode)}
                   className="liquid-button rounded-[1rem] border px-2 py-2.5 text-left transition-all active:scale-[0.98]"
                   style={{
                     borderColor: isActive ? theme.primary : theme.border,

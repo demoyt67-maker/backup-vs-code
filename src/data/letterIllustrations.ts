@@ -54,20 +54,24 @@ function buildIllustrationSvg(letter: ArabicLetter, visual: LetterVisual): strin
       </defs>
       <rect width="400" height="220" fill="url(#bg)"/>
       <circle cx="150" cy="110" r="70" fill="${visual.accent}" opacity="0.18"/>
-      <circle cx="360" cy="110" r="70" fill="#ffffff" opacity="0.75"/>
       <rect x="52" y="22" width="296" height="176" rx="32" fill="url(#card)" stroke="rgba(15,118,110,0.12)"/>
-      <g>
-        <rect x="220" y="48" width="120" height="120" rx="24" fill="#ffffff" opacity="0.9"/>
-        <text x="280" y="125" text-anchor="middle" font-size="64">${visual.emoji}</text>
-      </g>
-      <text x="76" y="145" text-anchor="middle" font-family="Amiri, serif" font-size="96" font-weight="700" fill="#0f766e">${letter.arabic}</text>
+      <circle cx="270" cy="110" r="55" fill="#ffffff" opacity="0.92"/>
+      <text x="270" y="125" text-anchor="middle" font-size="64">${visual.emoji}</text>
     </svg>
   `;
 
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
-export function getLetterIllustrationMeta(letter: ArabicLetter): LetterVisual {
+export function getLetterIllustrationMeta(letter: ArabicLetter | undefined): LetterVisual {
+  if (!letter) {
+    return {
+      emoji: '✨',
+      label: 'Bright idea',
+      accent: '#14b8a6',
+      soft: '#ccfbf1',
+    };
+  }
   return (
     LETTER_VISUALS[letter.index] ?? {
       emoji: '✨',
@@ -78,7 +82,10 @@ export function getLetterIllustrationMeta(letter: ArabicLetter): LetterVisual {
   );
 }
 
-export function getLetterIllustrationUrl(letter: ArabicLetter): string {
+export function getLetterIllustrationUrl(letter: ArabicLetter | undefined): string {
+  if (!letter) {
+    return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="220"><text x="200" y="110" text-anchor="middle" font-size="48">✨</text></svg>')}`;
+  }
   const visual = getLetterIllustrationMeta(letter);
   return buildIllustrationSvg(letter, visual);
 }

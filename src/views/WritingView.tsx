@@ -29,6 +29,44 @@ const LETTER_LIMITS: Record<1 | 2 | 3, number> = {
   3: TOTAL_LETTERS,
 };
 
+const LETTER_OFFSET_Y_CACHE = new Map<string, number>();
+
+const getLetterVisualOffsetY = (letter: string, fontSize: number): number => {
+  const key = `${letter}:${fontSize}`;
+  const cached = LETTER_OFFSET_Y_CACHE.get(key);
+  if (cached !== undefined) return cached;
+
+  const measureSize = 120;
+  const measureFontSize = Math.floor(measureSize * 0.72);
+  const off = document.createElement('canvas');
+  off.width = measureSize;
+  off.height = measureSize;
+  const ctx = off.getContext('2d', { willReadFrequently: true })!;
+  ctx.font = `700 ${measureFontSize}px Amiri, serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(letter, measureSize / 2, measureSize / 2);
+
+  const imageData = ctx.getImageData(0, 0, measureSize, measureSize);
+  const data = imageData.data;
+  let minY = measureSize;
+  let maxY = 0;
+  for (let y = 0; y < measureSize; y++) {
+    for (let x = 0; x < measureSize; x++) {
+      const alpha = data[(y * measureSize + x) * 4 + 3];
+      if (alpha > 0) {
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  const visualCenter = (minY + maxY) / 2;
+  const offsetY = (measureSize / 2 - visualCenter) * (fontSize / measureFontSize);
+  LETTER_OFFSET_Y_CACHE.set(key, offsetY);
+  return offsetY;
+};
+
 export function WritingView({ onHome, startLetter, onProgress, selectedClass }: Props) {
   const cms = useCMSClass1Data();
   const activeLetters = selectedClass === 1 && cms.usingCMS ? cms.letters : ARABIC_LETTERS;
@@ -104,7 +142,7 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
       drawGuide(current.arabic, w, h);
 
       // Rebuild target mask
-      rebuildMask(guide, w, h);
+      rebuildMask(guide, w, h, current.arabic);
 
       // Rescale & redraw existing strokes if we had old dimensions
       if (oldW > 0 && oldH > 0 && savedPoints.length > 0) {
@@ -148,11 +186,12 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
       fontSize = Math.floor(fontSize * ((w * 0.85) / measured.width));
       ctx.font = `700 ${fontSize}px Amiri, serif`;
     }
-    ctx.fillText(letter, w / 2, h / 2 + fontSize * 0.05);
+    const offsetY = getLetterVisualOffsetY(letter, fontSize);
+    ctx.fillText(letter, w / 2, h / 2 + offsetY);
     ctx.restore();
   }, []);
 
-  const rebuildMask = useCallback((guide: HTMLCanvasElement, w: number, h: number) => {
+  const rebuildMask = useCallback((guide: HTMLCanvasElement, w: number, h: number, letter: string) => {
     // Build the target mask from a CLEAN offscreen render of the letter only
     // (no background fill), so only actual letter pixels become target cells.
     // The guide canvas has a full-canvas background fill which would make every
@@ -170,17 +209,18 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
     offCtx.font = `700 ${fontSize}px Amiri, serif`;
     offCtx.textAlign = 'center';
     offCtx.textBaseline = 'middle';
-    const measured = offCtx.measureText(current.arabic);
+    const measured = offCtx.measureText(letter);
     if (measured.width > w * 0.85) {
       fontSize = Math.floor(fontSize * ((w * 0.85) / measured.width));
       offCtx.font = `700 ${fontSize}px Amiri, serif`;
     }
-    offCtx.fillText(current.arabic, w / 2, h / 2 + fontSize * 0.05);
+    const offsetY = getLetterVisualOffsetY(letter, fontSize);
+    offCtx.fillText(letter, w / 2, h / 2 + offsetY);
     offCtx.restore();
 
     const data = offCtx.getImageData(0, 0, w, h);
     targetMaskRef.current = buildTargetMask(data, THRESHOLDS.gridN, THRESHOLDS.proximityDilation);
-  }, [current.arabic]);
+  }, []);
 
   const redrawStrokes = useCallback((ctx: CanvasRenderingContext2D, pts: StrokePoint[]) => {
     const { w, h } = sizeRef.current;
@@ -355,7 +395,7 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
     window.requestAnimationFrame(() => {
       const { w, h } = sizeRef.current;
       drawGuide(activeLetters[nextIdx].arabic, w, h);
-      if (guide) rebuildMask(guide, w, h);
+      if (guide) rebuildMask(guide, w, h, activeLetters[nextIdx].arabic);
     });
   }, [completed, drawGuide, letterIdx, maxLetters, rebuildMask, activeLetters]);
 
@@ -384,7 +424,7 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
     window.requestAnimationFrame(() => {
       const { w, h } = sizeRef.current;
       drawGuide(activeLetters[0].arabic, w, h);
-      if (guide) rebuildMask(guide, w, h);
+      if (guide) rebuildMask(guide, w, h, activeLetters[0].arabic);
     });
   }, [drawGuide, rebuildMask, activeLetters]);
 
@@ -421,7 +461,7 @@ export function WritingView({ onHome, startLetter, onProgress, selectedClass }: 
                   const { w, h } = sizeRef.current;
                   drawGuide(activeLetters[0].arabic, w, h);
                   const guide = guideCanvasRef.current;
-                  if (guide) rebuildMask(guide, w, h);
+                  if (guide) rebuildMask(guide, w, h, activeLetters[0].arabic);
                 });
               }}
               className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 font-bold text-gold-700 shadow-md transition-all hover:shadow-lg active:scale-95"

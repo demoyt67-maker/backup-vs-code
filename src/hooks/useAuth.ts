@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, signInWithGoogle, signOut, onAuthStateChange } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 
-const AUTH_TIMEOUT_MS = 5000;
+const AUTH_INIT_TIMEOUT_MS = 8000;
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -54,28 +54,30 @@ export function useAuth() {
     const init = async () => {
       const timeoutId = setTimeout(() => {
         if (mounted && !initCompleted) {
-          console.warn('Auth initialization timed out');
           finishInit();
         }
-      }, AUTH_TIMEOUT_MS);
+      }, AUTH_INIT_TIMEOUT_MS);
 
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const currentUser = session?.user ?? null;
 
         if (mounted) {
-          setUser(currentUser);
-          await fetchRole(currentUser?.id);
+          if (currentUser) {
+            setUser(currentUser);
+            await fetchRole(currentUser?.id);
+            finishInit();
+          }
         }
       } catch (error) {
         console.error('Auth init error:', error);
         if (mounted) {
           setUser(null);
           setRole(null);
+          finishInit();
         }
       } finally {
         clearTimeout(timeoutId);
-        finishInit();
       }
     };
 
@@ -123,6 +125,3 @@ export function useAuth() {
     logout,
   };
 }
-
-// Export types for external use
-export type { User };

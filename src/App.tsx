@@ -247,6 +247,13 @@ function App() {
   const { isEnabled, features } = useFeatureControl();
 
   useEffect(() => {
+    if (isSuperAdmin && !isSuperAdminMode) {
+      setIsSuperAdminMode(true);
+      saveSuperAdminMode(true);
+    }
+  }, [isSuperAdmin, isSuperAdminMode]);
+
+  useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
       return;
     }

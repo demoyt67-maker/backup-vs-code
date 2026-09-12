@@ -24,6 +24,8 @@ interface Announcement {
   id: string;
   title: string;
   message: string;
+  announcement_type: 'text' | 'image';
+  image_url: string | null;
   created_at: string;
 }
 
@@ -159,7 +161,7 @@ export function HomeView({
       try {
         const { data, error } = await supabase
           .from('announcements')
-          .select('id, title, message, created_at')
+          .select('id, title, message, announcement_type, image_url, created_at')
           .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(1);
@@ -187,22 +189,39 @@ export function HomeView({
 
   const newestAnnouncement = announcements[0] ?? null;
 
+  const renderAnnouncement = (announcement: Announcement) => {
+    if (announcement.announcement_type === 'image') {
+      return (
+        <div
+          className="home-reveal liquid-panel mb-5 overflow-hidden rounded-[1.4rem] border shadow-sm md:p-0"
+          style={{ borderColor: theme.border, background: theme.surface }}
+        >
+          {announcement.image_url && (
+            <img src={announcement.image_url} alt="" className="h-48 w-full object-cover md:h-56" />
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="home-reveal liquid-panel mb-5 rounded-[1.4rem] border p-4 shadow-sm md:p-5" style={{ borderColor: theme.border, background: theme.surface }}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: theme.primaryStrong }}>Announcement</p>
+            <h3 className="mt-1 text-base font-bold text-primary-900">{announcement.title}</h3>
+            <p className="mt-1 text-sm text-primary-700 whitespace-pre-wrap">{announcement.message}</p>
+          </div>
+          <span className="text-[10px] font-semibold text-primary-600 whitespace-nowrap">
+            {new Date(announcement.created_at).toLocaleString()}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="home-shell mx-auto max-w-5xl animate-fade-in px-4 pb-28 pt-5 md:pb-12 md:pt-24">
-      {newestAnnouncement && (
-        <div className="home-reveal liquid-panel mb-5 rounded-[1.4rem] border p-4 shadow-sm md:p-5" style={{ borderColor: theme.border, background: theme.surface }}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: theme.primaryStrong }}>Announcement</p>
-              <h3 className="mt-1 text-base font-bold text-primary-900">{newestAnnouncement.title}</h3>
-              <p className="mt-1 text-sm text-primary-700 whitespace-pre-wrap">{newestAnnouncement.message}</p>
-            </div>
-            <span className="text-[10px] font-semibold text-primary-600 whitespace-nowrap">
-              {new Date(newestAnnouncement.created_at).toLocaleString()}
-            </span>
-          </div>
-        </div>
-      )}
+      {newestAnnouncement && renderAnnouncement(newestAnnouncement)}
 
       {announcementError && (
         <div className="mb-4 rounded-[1.4rem] border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">

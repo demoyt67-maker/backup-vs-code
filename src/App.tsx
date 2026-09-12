@@ -363,7 +363,7 @@ function App() {
         transition: 'background-color 500ms ease, color 500ms ease, border-color 500ms ease, box-shadow 500ms ease, background 500ms ease',
       }}
     >
-      <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} />
+      <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} onLogout={logout} />
       <main className="md:pt-0">
         {!selectedClass && <ClassSelectionScreen onSelect={handleSelectClass} currentClass={currentClassOnSelection} />}
         {selectedClass && view === 'home' && (
@@ -438,6 +438,8 @@ function App() {
             onToggleSuperAdminMode={toggleSuperAdminMode}
             appearanceMode={appearanceMode}
             onChangeAppearanceMode={updateAppearanceMode}
+            user={user}
+            onLogout={logout}
           />
         )}
         {selectedClass && view === 'superAdmin' && isSuperAdmin && isSuperAdminMode && (
@@ -469,7 +471,7 @@ function App() {
         )}
       </main>
       {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && (
-        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} />
+        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} onLogout={logout} />
       )}
     </div>
   );

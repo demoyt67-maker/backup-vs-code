@@ -1,5 +1,6 @@
 import type { View } from '@/types';
 import { CLASS_THEMES } from '@/theme';
+import { LogOut } from 'lucide-react';
 
 type Theme = (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
 
@@ -11,9 +12,11 @@ interface Props {
   onToggleSuperAdminMode: () => void;
   appearanceMode: 'light' | 'dark' | 'system';
   onChangeAppearanceMode: (mode: 'light' | 'dark' | 'system') => void;
+  user?: User | null;
+  onLogout?: () => void;
 }
 
-export function SettingsView({ onNavigate, theme, isSuperAdmin, isSuperAdminMode, onToggleSuperAdminMode, appearanceMode, onChangeAppearanceMode }: Props) {
+export function SettingsView({ onNavigate, theme, isSuperAdmin, isSuperAdminMode, onToggleSuperAdminMode, appearanceMode, onChangeAppearanceMode, user, onLogout }: Props) {
   const appearanceOptions: { mode: 'light' | 'dark' | 'system'; label: string; description: string }[] = [
     { mode: 'light', label: 'Light', description: 'Always light' },
     { mode: 'dark', label: 'Dark', description: 'Always dark' },
@@ -26,6 +29,25 @@ export function SettingsView({ onNavigate, theme, isSuperAdmin, isSuperAdminMode
         <h1 className="text-3xl font-black text-primary-900">Settings</h1>
         <p className="mt-1 text-sm text-primary-700">Manage your app preferences and account settings.</p>
       </div>
+
+      {user && (
+        <div className="liquid-panel mb-4 rounded-[1.4rem] p-4 shadow-sm" style={{ border: `1px solid ${theme.border}`, background: theme.surface }}>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: theme.primaryStrong }}>Account</p>
+              <h3 className="mt-1 text-base font-bold" style={{ color: theme.text }}>{user.user_metadata?.full_name || user.email || 'User'}</h3>
+              <p className="mt-1 text-xs text-primary-700">{user.email}</p>
+            </div>
+            <button
+              onClick={onLogout}
+              className="liquid-button interactive-card inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-primary-700 shadow-sm ring-1 ring-primary-100 transition-all hover:bg-primary-50 active:scale-95"
+            >
+              <LogOut size={16} />
+              Logout
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col gap-4">
         <div className="liquid-panel rounded-[1.4rem] p-4 shadow-sm" style={{ border: `1px solid ${theme.border}`, background: theme.surface }}>

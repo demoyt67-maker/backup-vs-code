@@ -40,10 +40,13 @@ interface Props {
   selectedClass?: 1 | 2 | 3;
   isSuperAdminMode?: boolean;
   enabledViews?: View[];
+  user?: User | null;
+  loading?: boolean;
+  isSuperAdmin?: boolean;
+  onLogout?: () => void;
 }
 
-export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews }: Props) {
-  const { isSuperAdmin } = useAuth();
+export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews, user, loading, isSuperAdmin, onLogout }: Props) {
   const adminItem: NavItem = { view: 'superAdmin', label: 'Admin', icon: Shield };
   const items: NavItem[] = isSuperAdmin && isSuperAdminMode ? [...baseItems, adminItem] : baseItems;
   const visibleItems: NavItem[] = selectedClass === 1 ? items : items.filter((item) => item.view !== 'writing');
@@ -92,14 +95,26 @@ export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSup
           );
         })}
       </div>
+      {user && (
+        <div className="mx-auto mt-2 flex max-w-md items-center justify-between rounded-[1.4rem] border border-white/50 bg-white/70 px-3 py-2 shadow-sm">
+          <span className="truncate text-xs font-semibold text-primary-900">{user.user_metadata?.full_name || user.email || 'User'}</span>
+          <button
+            onClick={onLogout}
+            className="rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            aria-label="Logout"
+            title="Logout"
+          >
+            <LogOut size={14} />
+          </button>
+        </div>
+      )}
     </nav>
   );
 }
 
 type TopNavProps = Props;
 
-export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews }: TopNavProps) {
-  const { isSuperAdmin, user, loading, logout } = useAuth();
+export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews, user, loading, isSuperAdmin, onLogout }: TopNavProps) {
   const adminItem: NavItem = { view: 'superAdmin', label: 'Admin', icon: Shield };
   const topItems: NavItem[] = isSuperAdmin && isSuperAdminMode ? [...baseTopItems, adminItem] : baseTopItems;
   const filteredItems = enabledViews ? topItems.filter((item) => enabledViews.includes(item.view)) : topItems;
@@ -165,7 +180,7 @@ export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperA
               <div className="hidden items-center gap-2 rounded-full border border-white/30 bg-white/70 px-3 py-1.5 text-sm font-medium md:flex" style={{ color: theme?.text ?? '#0b4239' }}>
                 <span className="max-w-[100px] truncate">{user.user_metadata?.full_name || user.email || 'User'}</span>
                 <button
-                  onClick={logout}
+                  onClick={onLogout}
                   className="rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
                   aria-label="Logout"
                   title="Logout"
@@ -174,7 +189,7 @@ export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperA
                 </button>
               </div>
               <button
-                onClick={logout}
+                onClick={onLogout}
                 className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200"
                 aria-label="Logout"
                 title="Logout"

@@ -24,27 +24,39 @@ export function useAuth() {
     };
 
     const fetchRole = async (userId: string | undefined) => {
+      console.log('[useAuth] fetchRole start, userId=', userId);
       if (!userId) {
+        console.log('[useAuth] fetchRole aborted: no userId');
         setRole(null);
         return;
       }
 
       try {
+        console.log('[useAuth] fetchRole querying profiles for userId=', userId);
         const { data, error } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', userId)
           .single();
 
+        console.log('[useAuth] fetchRole Supabase response data=', data, 'error=', error);
+
         if (error || !data) {
+          console.log('[useAuth] fetchRole failed: error or no data');
           setRole(null);
           return;
         }
 
+        const rawRole = data.role ?? null;
+        const normalized = (rawRole ?? '').trim().toLowerCase();
+        const isSuperAdmin = normalized === 'super_admin';
+        console.log('[useAuth] fetchRole final rawRole=', rawRole, 'normalized=', normalized, 'isSuperAdmin=', isSuperAdmin);
+
         if (mounted) {
-          setRole(data.role);
+          setRole(rawRole);
         }
-      } catch {
+      } catch (err) {
+        console.log('[useAuth] fetchRole exception:', err);
         if (mounted) {
           setRole(null);
         }
@@ -61,6 +73,7 @@ export function useAuth() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const currentUser = session?.user ?? null;
+        console.log('[useAuth] getSession result:', currentUser ? currentUser.email : 'null');
 
         if (mounted) {
           if (currentUser) {
@@ -70,7 +83,7 @@ export function useAuth() {
           }
         }
       } catch (error) {
-        console.error('Auth init error:', error);
+        console.error('[useAuth] init error:', error);
         if (mounted) {
           setUser(null);
           setRole(null);
@@ -85,10 +98,15 @@ export function useAuth() {
 
     const { data: { subscription: sub } } = onAuthStateChange(async (event, session) => {
       const currentUser = session?.user ?? null;
+      console.log('[useAuth] onAuthStateChange event:', event, 'user:', currentUser ? currentUser.email : 'null');
 
       if (mounted) {
         setUser(currentUser);
-        await fetchRole(currentUser?.id);
+        if (currentUser) {
+          await fetchRole(currentUser?.id);
+        } else {
+          setRole(null);
+        }
         finishInit();
       }
     });
@@ -112,7 +130,7 @@ export function useAuth() {
   }, []);
 
   const isAuthenticated = user !== null;
-  const isSuperAdmin = role === 'super_admin';
+  const isSuperAdmin = (role ?? '').trim().toLowerCase() === 'super_admin';
 
   return {
     user,

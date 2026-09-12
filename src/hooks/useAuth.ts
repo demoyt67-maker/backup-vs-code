@@ -11,9 +11,11 @@ export function useAuth() {
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
+    console.log('[useAuth] useEffect run');
     let subscription: { unsubscribe: () => void } | null = null;
     let mounted = true;
     let initCompleted = false;
+    let roleFetchId = 0;
 
     const finishInit = () => {
       if (mounted && !initCompleted) {
@@ -24,7 +26,9 @@ export function useAuth() {
     };
 
     const fetchRole = async (userId: string | undefined) => {
-      console.log('[useAuth] fetchRole start, userId=', userId);
+      const currentFetchId = ++roleFetchId;
+      console.log('[useAuth] fetchRole start, userId=', userId, 'fetchId=', currentFetchId);
+
       if (!userId) {
         console.log('[useAuth] fetchRole aborted: no userId');
         setRole(null);
@@ -37,9 +41,14 @@ export function useAuth() {
           .from('profiles')
           .select('role')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
 
-        console.log('[useAuth] fetchRole Supabase response data=', data, 'error=', error);
+        console.log('[useAuth] fetchRole Supabase response data=', data, 'error=', error, 'fetchId=', currentFetchId);
+
+        if (!mounted || roleFetchId !== currentFetchId) {
+          console.log('[useAuth] fetchRole stale response ignored, fetchId=', currentFetchId);
+          return;
+        }
 
         if (error || !data) {
           console.log('[useAuth] fetchRole failed: error or no data');
@@ -80,6 +89,8 @@ export function useAuth() {
             setUser(currentUser);
             await fetchRole(currentUser?.id);
             finishInit();
+          } else {
+            finishInit();
           }
         }
       } catch (error) {
@@ -96,14 +107,14 @@ export function useAuth() {
 
     init();
 
-    const { data: { subscription: sub } } = onAuthStateChange(async (event, session) => {
+    const { data: { subscription: sub } } = onAuthStateChange((event, session) => {
       const currentUser = session?.user ?? null;
       console.log('[useAuth] onAuthStateChange event:', event, 'user:', currentUser ? currentUser.email : 'null');
 
       if (mounted) {
         setUser(currentUser);
         if (currentUser) {
-          await fetchRole(currentUser?.id);
+          fetchRole(currentUser?.id);
         } else {
           setRole(null);
         }
@@ -114,6 +125,7 @@ export function useAuth() {
     subscription = sub;
 
     return () => {
+      console.log('[useAuth] cleanup');
       mounted = false;
       if (subscription) {
         subscription.unsubscribe();

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, signInWithGoogle, signOut, onAuthStateChange } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 
-const AUTH_TIMEOUT_MS = 4000;
+const AUTH_TIMEOUT_MS = 5000;
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -13,10 +13,11 @@ export function useAuth() {
   useEffect(() => {
     let subscription: { unsubscribe: () => void } | null = null;
     let mounted = true;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let initCompleted = false;
 
     const finishInit = () => {
-      if (mounted) {
+      if (mounted && !initCompleted) {
+        initCompleted = true;
         setLoading(false);
         setInitialized(true);
       }
@@ -51,10 +52,9 @@ export function useAuth() {
     };
 
     const init = async () => {
-      timeoutId = setTimeout(() => {
-        if (mounted) {
-          setUser(null);
-          setRole(null);
+      const timeoutId = setTimeout(() => {
+        if (mounted && !initCompleted) {
+          console.warn('Auth initialization timed out');
           finishInit();
         }
       }, AUTH_TIMEOUT_MS);
@@ -74,9 +74,7 @@ export function useAuth() {
           setRole(null);
         }
       } finally {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
+        clearTimeout(timeoutId);
         finishInit();
       }
     };
@@ -97,9 +95,6 @@ export function useAuth() {
 
     return () => {
       mounted = false;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
       if (subscription) {
         subscription.unsubscribe();
       }

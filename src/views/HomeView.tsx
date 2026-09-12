@@ -1,7 +1,10 @@
+import { useState, useEffect } from 'react';
 import { PenTool, BookOpen, BarChart3, PlayCircle, GraduationCap, Sparkles } from 'lucide-react';
 import type { View } from '@/types';
 import type { ScoreData } from '@/hooks/useScoreStore';
 import { CLASS_THEMES } from '@/theme';
+import { useFeatureControl } from '@/hooks/useFeatureControl';
+import { supabase } from '@/lib/supabaseClient';
 
 type AppearanceMode = 'light' | 'dark' | 'system';
 
@@ -15,6 +18,13 @@ interface Props {
   onChangeAppearanceMode: (mode: AppearanceMode) => void;
   isSuperAdminMode: boolean;
   onToggleSuperAdminMode: () => void;
+}
+
+interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  created_at: string;
 }
 
 const CLASS_OPTIONS: { level: 1 | 2 | 3; title: string; subtitle: string; accent: string; badge: string }[] = [
@@ -34,6 +44,10 @@ export function HomeView({
   isSuperAdminMode,
   onToggleSuperAdminMode,
 }: Props) {
+  const { isEnabled } = useFeatureControl();
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcementError, setAnnouncementError] = useState<string | null>(null);
+
   const classLabel = `Class ${selectedClass}`;
   const classDescription =
     selectedClass === 1
@@ -74,6 +88,13 @@ export function HomeView({
     { mode: 'dark', label: 'Dark', description: 'Always dark' },
     { mode: 'system', label: 'System', description: 'Match device' },
   ];
+
+  const viewToFeatureKey = (view: View): 'learning' | 'quiz' | 'writing' | 'harakat' | null => {
+    if (view === 'learn') return 'learning';
+    if (view === 'quiz') return 'quiz';
+    if (view === 'writing') return 'writing';
+    return null;
+  };
 
   const cards: {
     view: View;
@@ -126,8 +147,69 @@ export function HomeView({
           },
         ];
 
+  const visibleCards = cards.filter((card) => {
+    const featureKey = viewToFeatureKey(card.view);
+    return featureKey === null || isEnabled(featureKey);
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAnnouncements() {
+      try {
+        const { data, error } = await supabase
+          .from('announcements')
+          .select('id, title, message, created_at')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (!cancelled) {
+          if (error) {
+            setAnnouncementError(error.message);
+          } else if (data && data.length > 0) {
+            setAnnouncements(data as Announcement[]);
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setAnnouncementError('Failed to load announcements');
+        }
+      }
+    }
+
+    loadAnnouncements();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const newestAnnouncement = announcements[0] ?? null;
+
   return (
     <div className="home-shell mx-auto max-w-5xl animate-fade-in px-4 pb-28 pt-5 md:pb-12 md:pt-24">
+      {newestAnnouncement && (
+        <div className="home-reveal liquid-panel mb-5 rounded-[1.4rem] border p-4 shadow-sm md:p-5" style={{ borderColor: theme.border, background: theme.surface }}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: theme.primaryStrong }}>Announcement</p>
+              <h3 className="mt-1 text-base font-bold text-primary-900">{newestAnnouncement.title}</h3>
+              <p className="mt-1 text-sm text-primary-700 whitespace-pre-wrap">{newestAnnouncement.message}</p>
+            </div>
+            <span className="text-[10px] font-semibold text-primary-600 whitespace-nowrap">
+              {new Date(newestAnnouncement.created_at).toLocaleString()}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {announcementError && (
+        <div className="mb-4 rounded-[1.4rem] border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+          {announcementError}
+        </div>
+      )}
+
       <div className="home-reveal liquid-panel mb-5 rounded-[1.8rem] p-3 md:p-4" style={{ borderColor: theme.border, background: theme.surface }}>
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -232,7 +314,7 @@ export function HomeView({
 
       {/* Feature cards */}
       <div className="mt-5 grid grid-cols-2 gap-3 md:mt-7 md:grid-cols-3 md:gap-4">
-        {cards.map(({ view, label, desc, icon: Icon, featured }, index) => (
+        {visibleCards.map(({ view, label, desc, icon: Icon, featured }, index) => (
           <button
             key={view}
             onClick={() => onNavigate(view)}

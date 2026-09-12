@@ -17,6 +17,10 @@ export function SuperAdminView({ onNavigate, theme }: Props) {
     onNavigate('featureControl');
   };
 
+  const handleAnnouncementManagement = () => {
+    onNavigate('announcementManagement');
+  };
+
   const cards = [
     {
       title: 'Feature Control',
@@ -24,6 +28,13 @@ export function SuperAdminView({ onNavigate, theme }: Props) {
       icon: '🎛️',
       status: 'Open',
       onClick: handleFeatureControl,
+    },
+    {
+      title: 'Announcement Management',
+      description: 'Create and manage announcements for users.',
+      icon: '📢',
+      status: 'Open',
+      onClick: handleAnnouncementManagement,
     },
     {
       title: 'User Management',

@@ -9,10 +9,13 @@ import { ScoreView } from '@/views/ScoreView';
 import { SettingsView } from '@/views/SettingsView';
 import { SuperAdminView } from '@/views/SuperAdminView';
 import { FeatureControlView } from '@/views/FeatureControlView';
+import { AnnouncementManagementView } from '@/views/AnnouncementManagementView';
+import { DisabledFeatureView } from '@/views/DisabledFeatureView';
 import { CMSView } from '@/views/CMSView';
 import { useScoreStore } from '@/hooks/useScoreStore';
 import { useLearningProgress } from '@/hooks/useLearningProgress';
 import { useAuth } from '@/hooks/useAuth';
+import { useFeatureControl } from '@/hooks/useFeatureControl';
 import type { View } from '@/types';
 
 export type ClassLevel = 1 | 2 | 3;
@@ -241,6 +244,7 @@ function App() {
   });
 
   const { user, loading, initialized, login, logout, isSuperAdmin } = useAuth();
+  const { isEnabled, features } = useFeatureControl();
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -298,7 +302,14 @@ function App() {
     wordsLearned, toggleWord, markWord,
     resetLearning,
   } = useLearningProgress(selectedClass ?? 1);
-  const navigate = useCallback((v: View) => setView(v), []);
+  const navigate = useCallback((v: View) => {
+    if (v === 'featureControl') {
+      if (!isSuperAdmin || !isSuperAdminMode) return;
+    } else if (v !== 'home' && v !== 'settings' && v !== 'superAdmin' && v !== 'cms' && !isEnabled(v as 'learning' | 'quiz' | 'writing' | 'harakat')) {
+      return;
+    }
+    setView(v);
+  }, [isEnabled, isSuperAdmin, isSuperAdminMode]);
   const goHome = useCallback(() => setView('home'), []);
   const handleSelectClass = useCallback((level: ClassLevel) => {
     saveSelectedClass(level);
@@ -322,6 +333,19 @@ function App() {
     resetLearning();
   }, [resetAll, resetLearning]);
 
+  const enabledViews = useMemo<View[]>(() => {
+    const views: View[] = ['home', 'score', 'settings'];
+    if (isEnabled('learning')) views.push('learn');
+    if (isEnabled('quiz')) views.push('quiz');
+    if (isEnabled('writing')) views.push('writing');
+    if (isSuperAdmin && isSuperAdminMode) {
+      views.push('superAdmin');
+      views.push('cms');
+      views.push('featureControl');
+    }
+    return views;
+  }, [isEnabled, isSuperAdmin, isSuperAdminMode]);
+
   if (!initialized || loading) {
     return <LoadingScreen />;
   }
@@ -339,7 +363,7 @@ function App() {
         transition: 'background-color 500ms ease, color 500ms ease, border-color 500ms ease, box-shadow 500ms ease, background 500ms ease',
       }}
     >
-      <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} />
+      <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} />
       <main className="md:pt-0">
         {!selectedClass && <ClassSelectionScreen onSelect={handleSelectClass} currentClass={currentClassOnSelection} />}
         {selectedClass && view === 'home' && (
@@ -355,7 +379,7 @@ function App() {
             onToggleSuperAdminMode={toggleSuperAdminMode}
           />
         )}
-        {selectedClass && selectedClass === 1 && view === 'quiz' && (
+        {selectedClass && selectedClass === 1 && view === 'quiz' && isEnabled('quiz') && (
           <QuizView
             onHome={goHome}
             onFinish={recordQuizResult}
@@ -363,7 +387,10 @@ function App() {
             learned={learned}
           />
         )}
-        {selectedClass && view === 'learn' && (
+        {selectedClass && selectedClass === 1 && view === 'quiz' && !isEnabled('quiz') && (
+          <DisabledFeatureView onNavigate={navigate} theme={selectedTheme} featureName="Quiz" />
+        )}
+        {selectedClass && view === 'learn' && isEnabled('learning') && (
           <LearnView
             onHome={goHome}
             learned={learned}
@@ -387,13 +414,19 @@ function App() {
             isSuperAdminMode={isSuperAdminMode}
           />
         )}
-        {selectedClass && selectedClass === 1 && view === 'writing' && (
+        {selectedClass && view === 'learn' && !isEnabled('learning') && (
+          <DisabledFeatureView onNavigate={navigate} theme={selectedTheme} featureName="Learning" />
+        )}
+        {selectedClass && selectedClass === 1 && view === 'writing' && isEnabled('writing') && (
           <WritingView
             onHome={goHome}
             startLetter={data.writingUnlocked}
             onProgress={recordWritingProgress}
             selectedClass={selectedClass}
           />
+        )}
+        {selectedClass && selectedClass === 1 && view === 'writing' && !isEnabled('writing') && (
+          <DisabledFeatureView onNavigate={navigate} theme={selectedTheme} featureName="Writing Practice" />
         )}
         {selectedClass && view === 'score' && <ScoreView onHome={goHome} score={data} onReset={resetEverything} />}
         {selectedClass && view === 'settings' && (
@@ -419,6 +452,15 @@ function App() {
             theme={selectedTheme}
           />
         )}
+        {selectedClass && view === 'featureControl' && !(isSuperAdmin && isSuperAdminMode) && (
+          <DisabledFeatureView onNavigate={navigate} theme={selectedTheme} />
+        )}
+        {selectedClass && view === 'announcementManagement' && isSuperAdmin && isSuperAdminMode && (
+          <AnnouncementManagementView
+            onNavigate={navigate}
+            theme={selectedTheme}
+          />
+        )}
         {selectedClass && view === 'cms' && isSuperAdmin && isSuperAdminMode && (
           <CMSView
             onNavigate={navigate}
@@ -426,8 +468,8 @@ function App() {
           />
         )}
       </main>
-      {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'cms' && (
-        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} />
+      {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && (
+        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} />
       )}
     </div>
   );

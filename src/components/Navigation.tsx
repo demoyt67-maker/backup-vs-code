@@ -39,13 +39,15 @@ interface Props {
   };
   selectedClass?: 1 | 2 | 3;
   isSuperAdminMode?: boolean;
+  enabledViews?: View[];
 }
 
-export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false }: Props) {
+export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews }: Props) {
   const { isSuperAdmin } = useAuth();
   const adminItem: NavItem = { view: 'superAdmin', label: 'Admin', icon: Shield };
   const items: NavItem[] = isSuperAdmin && isSuperAdminMode ? [...baseItems, adminItem] : baseItems;
   const visibleItems: NavItem[] = selectedClass === 1 ? items : items.filter((item) => item.view !== 'writing');
+  const filteredItems = enabledViews ? visibleItems.filter((item) => enabledViews.includes(item.view)) : visibleItems;
 
   return (
     <nav
@@ -53,7 +55,7 @@ export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSup
       style={{ borderColor: theme?.border ?? 'rgba(11,66,57,0.12)', boxShadow: '0 -10px 24px rgba(15, 58, 49, 0.08)' }}
     >
       <div className="mx-auto flex max-w-md items-stretch justify-around gap-1 rounded-[1.4rem] border border-white/50 bg-white/70 p-1.5 shadow-inner">
-        {visibleItems.map(({ view, label, icon: Icon }) => {
+        {filteredItems.map(({ view, label, icon: Icon }) => {
           const active = current === view;
           return (
             <button
@@ -96,11 +98,11 @@ export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSup
 
 type TopNavProps = Props;
 
-export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false }: TopNavProps) {
+export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews }: TopNavProps) {
   const { isSuperAdmin, user, loading, logout } = useAuth();
   const adminItem: NavItem = { view: 'superAdmin', label: 'Admin', icon: Shield };
   const topItems: NavItem[] = isSuperAdmin && isSuperAdminMode ? [...baseTopItems, adminItem] : baseTopItems;
-  const visibleItems: NavItem[] = topItems;
+  const filteredItems = enabledViews ? topItems.filter((item) => enabledViews.includes(item.view)) : topItems;
 
   return (
     <header
@@ -130,7 +132,7 @@ export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperA
           </span>
         </button>
         <nav className="flex items-center gap-1.5 rounded-full border border-white/50 bg-white/70 p-1.5 shadow-sm backdrop-blur-md" style={{ borderColor: theme?.border ?? 'rgba(11,66,57,0.12)' }}>
-          {visibleItems.map(({ view, label, icon: Icon }) => {
+          {filteredItems.map(({ view, label, icon: Icon }) => {
             const active = current === view || (view === 'home' && current === 'quiz');
             return (
               <button

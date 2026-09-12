@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { View } from '@/types';
 import { CLASS_THEMES } from '@/theme';
 
@@ -8,6 +8,8 @@ interface Props {
   onNavigate: (v: View) => void;
   theme: Theme;
 }
+
+const STORAGE_KEY = 'madrasa_feature_control';
 
 const FEATURES = [
   {
@@ -36,14 +38,41 @@ const FEATURES = [
   },
 ];
 
+const defaultFeatures = (): Record<string, boolean> => {
+  const initial: Record<string, boolean> = {};
+  FEATURES.forEach((f) => {
+    initial[f.key] = true;
+  });
+  return initial;
+};
+
 export function FeatureControlView({ onNavigate, theme }: Props) {
   const [features, setFeatures] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    FEATURES.forEach((f) => {
-      initial[f.key] = true;
-    });
-    return initial;
+    if (typeof window === 'undefined') return defaultFeatures();
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return defaultFeatures();
+      const parsed = JSON.parse(raw);
+      const merged = defaultFeatures();
+      FEATURES.forEach((f) => {
+        if (typeof parsed[f.key] === 'boolean') {
+          merged[f.key] = parsed[f.key];
+        }
+      });
+      return merged;
+    } catch {
+      return defaultFeatures();
+    }
   });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(features));
+    } catch {
+      // ignore storage errors
+    }
+  }, [features]);
 
   const toggleFeature = (key: string) => {
     setFeatures((prev) => ({

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { PenTool, BookOpen, BarChart3, PlayCircle, GraduationCap, Sparkles } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { PenTool, BookOpen, BarChart3, PlayCircle, GraduationCap, Sparkles, Volume2 } from 'lucide-react';
 import type { View } from '@/types';
 import type { ScoreData } from '@/hooks/useScoreStore';
 import { CLASS_THEMES } from '@/theme';
@@ -26,6 +26,9 @@ interface Announcement {
   message: string;
   announcement_type: 'text' | 'image';
   image_url: string | null;
+  aspect_ratio: string | null;
+  is_active: boolean;
+  expires_at: string | null;
   created_at: string;
 }
 
@@ -161,10 +164,10 @@ export function HomeView({
       try {
         const { data, error } = await supabase
           .from('announcements')
-          .select('id, title, message, announcement_type, image_url, created_at')
+          .select('id, title, message, announcement_type, image_url, aspect_ratio, is_active, expires_at, created_at')
           .eq('is_active', true)
-          .order('created_at', { ascending: false })
-          .limit(1);
+          .or('expires_at.is.null,expires_at.gt.' + new Date().toISOString())
+          .order('created_at', { ascending: false });
 
         if (!cancelled) {
           if (error) {
@@ -187,41 +190,181 @@ export function HomeView({
     };
   }, []);
 
-  const newestAnnouncement = announcements[0] ?? null;
+  const textAnnouncements = announcements.filter((a) => a.announcement_type === 'text');
+  const imageAnnouncements = announcements.filter((a) => a.announcement_type === 'image');
 
-  const renderAnnouncement = (announcement: Announcement) => {
-    if (announcement.announcement_type === 'image') {
+  const makeCarousel = (items: Announcement[]) => {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [isTransitioning, setIsTransitioning] = useState(false);
+    const touchStartX = useRef(0);
+    const touchEndX = useRef(0);
+    const autoPlayTimer = useRef<ReturnType<typeof setTimeout>>();
+
+    const goTo = (index: number) => {
+      if (isTransitioning || items.length <= 1) return;
+      setIsTransitioning(true);
+      setCurrentIndex((index + items.length) % items.length);
+      setTimeout(() => setIsTransitioning(false), 400);
+    };
+
+    const goNext = () => {
+      if (items.length <= 1) return;
+      goTo(currentIndex + 1);
+    };
+
+    const goPrev = () => {
+      if (items.length <= 1) return;
+      goTo(currentIndex - 1);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+      touchEndX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = () => {
+      const diff = touchStartX.current - touchEndX.current;
+      if (Math.abs(diff) > 50) {
+        if (diff > 0) {
+          goNext();
+        } else {
+          goPrev();
+        }
+      }
+      touchStartX.current = 0;
+      touchEndX.current = 0;
+    };
+
+    useEffect(() => {
+      if (items.length <= 1) return;
+      autoPlayTimer.current = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % items.length);
+      }, 5000);
+      return () => {
+        if (autoPlayTimer.current) {
+          clearInterval(autoPlayTimer.current);
+        }
+      };
+    }, [items.length]);
+
+    const resetAutoPlay = () => {
+      if (autoPlayTimer.current) {
+        clearInterval(autoPlayTimer.current);
+      }
+      if (items.length > 1) {
+        autoPlayTimer.current = setInterval(() => {
+          setCurrentIndex((prev) => (prev + 1) % items.length);
+        }, 5000);
+      }
+    };
+
+    const handleManualNav = (index: number) => {
+      goTo(index);
+      resetAutoPlay();
+    };
+
+    const renderItem = (announcement: Announcement) => {
+      const isImage = announcement.announcement_type === 'image';
+      const displayTitle = isImage && !announcement.title.trim() ? 'Announcement' : announcement.title;
+      const displayMessage = isImage ? '' : announcement.message;
+
       return (
-        <div
-          className="home-reveal liquid-panel mb-5 overflow-hidden rounded-[1.4rem] border shadow-sm md:p-0"
-          style={{ borderColor: theme.border, background: theme.surface }}
-        >
-          {announcement.image_url && (
-            <img src={announcement.image_url} alt="" className="h-48 w-full object-cover md:h-56" />
+        <div className="flex items-center gap-3 p-3 md:p-4">
+          <div className="flex-shrink-0">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-700">
+              <Volume2 size={16} />
+            </div>
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold text-primary-900 truncate">{displayTitle}</p>
+            {displayMessage && (
+              <p className="text-xs text-primary-700 truncate">{displayMessage}</p>
+            )}
+          </div>
+
+          {isImage && announcement.image_url && (
+            <div className="flex-shrink-0">
+              <img
+                src={announcement.image_url}
+                alt=""
+                className="h-10 w-10 rounded-lg object-cover"
+              />
+            </div>
           )}
         </div>
       );
-    }
+    };
 
-    return (
-      <div className="home-reveal liquid-panel mb-5 rounded-[1.4rem] border p-4 shadow-sm md:p-5" style={{ borderColor: theme.border, background: theme.surface }}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: theme.primaryStrong }}>Announcement</p>
-            <h3 className="mt-1 text-base font-bold text-primary-900">{announcement.title}</h3>
-            <p className="mt-1 text-sm text-primary-700 whitespace-pre-wrap">{announcement.message}</p>
-          </div>
-          <span className="text-[10px] font-semibold text-primary-600 whitespace-nowrap">
-            {new Date(announcement.created_at).toLocaleString()}
-          </span>
+    const carousel = (
+      <div className="home-reveal relative overflow-hidden rounded-xl border shadow-sm" style={{ borderColor: theme.border, background: theme.surface }}>
+        <div
+          className="flex transition-transform duration-300 ease-in-out"
+          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {items.map((announcement) => (
+            <div key={announcement.id} className="w-full flex-shrink-0">
+              {renderItem(announcement)}
+            </div>
+          ))}
         </div>
+
+        {items.length > 1 && (
+          <>
+            <button
+              onClick={() => {
+                goPrev();
+                resetAutoPlay();
+              }}
+              className="absolute left-1.5 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-primary-700 shadow-md ring-1 ring-primary-100 transition-all hover:bg-white hover:scale-105 active:scale-95"
+              aria-label="Previous announcement"
+            >
+              ‹
+            </button>
+            <button
+              onClick={() => {
+                goNext();
+                resetAutoPlay();
+              }}
+              className="absolute right-1.5 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-primary-700 shadow-md ring-1 ring-primary-100 transition-all hover:bg-white hover:scale-105 active:scale-95"
+              aria-label="Next announcement"
+            >
+              ›
+            </button>
+            <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
+              {items.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleManualNav(idx)}
+                  className={`h-1.5 rounded-full transition-all ${
+                    idx === currentIndex ? 'w-4 bg-primary-600' : 'w-1.5 bg-primary-300 hover:bg-primary-400'
+                  }`}
+                  aria-label={`Go to announcement ${idx + 1}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
     );
+
+    return carousel;
   };
+
+  const textSlider = makeCarousel(textAnnouncements);
+  const imageSlider = makeCarousel(imageAnnouncements);
 
   return (
     <div className="home-shell mx-auto max-w-5xl animate-fade-in px-4 pb-28 pt-5 md:pb-12 md:pt-24">
-      {newestAnnouncement && renderAnnouncement(newestAnnouncement)}
+      {textAnnouncements.length > 0 && textSlider}
+
+      {imageAnnouncements.length > 0 && imageSlider}
 
       {announcementError && (
         <div className="mb-4 rounded-[1.4rem] border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">

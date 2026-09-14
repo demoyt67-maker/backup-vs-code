@@ -3,6 +3,8 @@ import type { View } from '@/types';
 import { CLASS_THEMES } from '@/theme';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/hooks/useAuth';
+import Cropper from 'react-easy-crop';
+import type { Crop, PixelCrop, Area } from 'react-easy-crop';
 
 type Theme = (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
 
@@ -14,7 +16,9 @@ interface Announcement {
   message: string;
   announcement_type: AnnouncementType;
   image_url: string | null;
+  aspect_ratio: string | null;
   is_active: boolean;
+  expires_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -25,7 +29,9 @@ type AnnouncementRow = {
   message: string;
   announcement_type: AnnouncementType;
   image_url: string | null;
+  aspect_ratio: string | null;
   is_active: boolean;
+  expires_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -47,10 +53,17 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [announcementType, setAnnouncementType] = useState<AnnouncementType>('text');
+  const [aspectRatio, setAspectRatio] = useState<string | null>(null);
+  const [cropperAspect, setCropperAspect] = useState<number | undefined>(undefined);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [croppedImage, setCroppedImage] = useState<string | null>(null);
+  const [crop, setCrop] = useState<Crop>({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
   const [uploading, setUploading] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [neverExpires, setNeverExpires] = useState(true);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +93,11 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
   }, []);
 
   useEffect(() => {
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+  }, [aspectRatio]);
+
+  useEffect(() => {
     let cancelled = false;
     (async () => {
       const { data, error } = await supabase.rpc('check_my_admin_status');
@@ -103,12 +121,46 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
     return data.publicUrl;
   };
 
+  const getCroppedImage = async (imageSrc: string, pixelCrop: PixelCrop): Promise<File> => {
+    const response = await fetch(imageSrc);
+    const blob = await response.blob();
+    const image = await createImageBitmap(blob);
+    const canvas = document.createElement('canvas');
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Canvas context unavailable');
+    ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height);
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) return reject(new Error('Canvas blob failed'));
+        resolve(new File([blob], 'cropped-image.jpg', { type: 'image/jpeg' }));
+      }, 'image/jpeg', 0.92);
+    });
+  };
+
+  const parseAspectRatio = (ratio: string | null | undefined): number | undefined => {
+    if (!ratio) return undefined;
+    const parts = ratio.replace(':', '/').split('/').map(Number);
+    if (parts.length === 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1]) && parts[1] > 0) {
+      return parts[0] / parts[1];
+    }
+    return undefined;
+  };
+
   const resetForm = () => {
     setTitle('');
     setMessage('');
     setAnnouncementType('text');
+    setAspectRatio(null);
+    setCropperAspect(undefined);
     setImageFile(null);
     setImagePreview(null);
+    setCroppedImage(null);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setExpiresAt(null);
+    setNeverExpires(true);
     setEditingId(null);
     setShowForm(false);
   };
@@ -127,30 +179,35 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
         const updatePayload: Record<string, unknown> = {
           announcement_type: announcementType,
           updated_at: new Date().toISOString(),
+          expires_at: neverExpires ? null : expiresAt,
         };
 
         if (announcementType === 'text') {
           updatePayload.title = trimmedTitle;
           updatePayload.message = trimmedMessage;
           updatePayload.image_url = null;
-        } else if (imageFile) {
+          updatePayload.aspect_ratio = null;
+        } else if (croppedImage) {
           updatePayload.title = '';
           updatePayload.message = '';
-          const ext = imageFile.name.split('.').pop() || 'bin';
+          const blob = await fetch(croppedImage).then((res) => res.blob());
+          const file = new File([blob], `announcement-${editingId}.jpg`, { type: 'image/jpeg' });
+          const ext = 'jpg';
           const fileName = `${editingId}-${Date.now()}.${ext}`;
           const filePath = `${editingId}/${fileName}`;
-          console.log('[Announcement] STORAGE UPLOAD start:', { filePath, bucket: STORAGE_BUCKET });
-          const uploadedUrl = await uploadImage(imageFile, filePath);
-          console.log('[Announcement] STORAGE UPLOAD done:', uploadedUrl);
+          const uploadedUrl = await uploadImage(file, filePath);
           updatePayload.image_url = uploadedUrl;
+          updatePayload.aspect_ratio = aspectRatio;
         } else if (imagePreview) {
           updatePayload.title = '';
           updatePayload.message = '';
           updatePayload.image_url = imagePreview;
+          updatePayload.aspect_ratio = aspectRatio;
         } else {
           updatePayload.title = '';
           updatePayload.message = '';
           updatePayload.image_url = null;
+          updatePayload.aspect_ratio = aspectRatio;
         }
 
         console.log('[Announcement] DATABASE UPDATE payload:', JSON.stringify(updatePayload));
@@ -166,12 +223,11 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
       } else {
         let imageUrl: string | null = null;
 
-        if (announcementType === 'image' && imageFile) {
-          const ext = imageFile.name.split('.').pop() || 'bin';
-          const fileName = `announcements/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-          console.log('[Announcement] STORAGE UPLOAD start:', { fileName, bucket: STORAGE_BUCKET });
-          imageUrl = await uploadImage(imageFile, fileName);
-          console.log('[Announcement] STORAGE UPLOAD done:', imageUrl);
+        if (announcementType === 'image' && croppedImage) {
+          const blob = await fetch(croppedImage).then((res) => res.blob());
+          const file = new File([blob], `announcement-${Date.now()}.jpg`, { type: 'image/jpeg' });
+          const fileName = `announcements/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+          imageUrl = await uploadImage(file, fileName);
         }
 
         const insertPayload: Record<string, unknown> = {
@@ -180,6 +236,8 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
           title: announcementType === 'text' ? trimmedTitle : '',
           message: announcementType === 'text' ? trimmedMessage : '',
           image_url: announcementType === 'image' ? imageUrl : null,
+          aspect_ratio: announcementType === 'image' ? aspectRatio : null,
+          expires_at: neverExpires ? null : expiresAt,
         };
 
         console.log('[Announcement] DATABASE INSERT payload:', JSON.stringify(insertPayload));
@@ -207,10 +265,22 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
     setTitle(announcement.title);
     setMessage(announcement.message);
     setAnnouncementType(announcement.announcement_type);
+    setAspectRatio(announcement.aspect_ratio);
+    setCropperAspect(parseAspectRatio(announcement.aspect_ratio));
     setImageFile(null);
     setImagePreview(announcement.image_url);
     setEditingId(announcement.id);
     setShowForm(true);
+    if (announcement.expires_at) {
+      const date = new Date(announcement.expires_at);
+      const offset = date.getTimezoneOffset();
+      const localDate = new Date(date.getTime() - offset * 60 * 1000);
+      setExpiresAt(localDate.toISOString().slice(0, 16));
+      setNeverExpires(false);
+    } else {
+      setExpiresAt(null);
+      setNeverExpires(true);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -228,6 +298,11 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
     const file = e.target.files?.[0];
     if (!file) return;
     setImageFile(file);
+    setCroppedImage(null);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setAspectRatio(null);
+    setCropperAspect(undefined);
     const reader = new FileReader();
     reader.onloadend = () => setImagePreview(reader.result as string);
     reader.readAsDataURL(file);
@@ -236,7 +311,49 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
   const handleRemoveImage = () => {
     setImageFile(null);
     setImagePreview(null);
+    setCroppedImage(null);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setAspectRatio(null);
+    setCropperAspect(undefined);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const onMediaLoaded = (mediaSize: { naturalWidth: number; naturalHeight: number }) => {
+    const { naturalWidth, naturalHeight } = mediaSize;
+    if (!naturalWidth || !naturalHeight) return;
+    const aspect = naturalWidth / naturalHeight;
+    const gcd = (a: number, b: number) => b ? gcd(b, a % b) : a;
+    const divisor = gcd(naturalWidth, naturalHeight);
+    const ratioString = `${naturalWidth / divisor}/${naturalHeight / divisor}`;
+    setCropperAspect(aspect);
+    setAspectRatio(ratioString);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+  };
+
+  const getAnnouncementStatus = (announcement: Announcement): 'Active' | 'Expired' | 'Never expires' => {
+    if (!announcement.is_active) return 'Expired';
+    if (!announcement.expires_at) return 'Never expires';
+    return new Date(announcement.expires_at) > new Date() ? 'Active' : 'Expired';
+  };
+
+  const statusStyles: Record<string, { bg: string; text: string }> = {
+    Active: 'bg-green-100 text-green-700',
+    Expired: 'bg-red-100 text-red-700',
+    'Never expires': 'bg-blue-100 text-blue-700',
+  };
+
+  const onCropComplete = async (_: Area, croppedAreaPixels: PixelCrop) => {
+    if (!imagePreview) return;
+    try {
+      const cropped = await getCroppedImage(imagePreview, croppedAreaPixels);
+      const reader = new FileReader();
+      reader.onloadend = () => setCroppedImage(reader.result as string);
+      reader.readAsDataURL(cropped);
+    } catch {
+      // ignore preview generation errors
+    }
   };
 
   return (
@@ -293,6 +410,33 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
               </div>
             </div>
 
+            <div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="never-expires"
+                  type="checkbox"
+                  checked={neverExpires}
+                  onChange={(e) => setNeverExpires(e.target.checked)}
+                  className="h-4 w-4 rounded border-primary-300 text-primary-600 focus:ring-primary-500"
+                />
+                <label htmlFor="never-expires" className="text-xs font-bold uppercase tracking-wider text-primary-700">
+                  Never expires
+                </label>
+              </div>
+              {!neverExpires && (
+                <div className="mt-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-primary-700">Expiry Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    value={expiresAt || ''}
+                    onChange={(e) => setExpiresAt(e.target.value || null)}
+                    className="mt-1 w-full rounded-xl border px-4 py-2.5 text-sm font-semibold text-primary-900 outline-none transition-all focus:ring-2 focus:ring-primary-500"
+                    style={{ borderColor: theme.border, background: theme.surfaceStrong, color: theme.text }}
+                  />
+                </div>
+              )}
+            </div>
+
             {announcementType === 'text' && (
               <div className="space-y-4">
                 <div>
@@ -332,14 +476,48 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
                     className="hidden"
                   />
                   {imagePreview ? (
-                    <div className="relative inline-block">
-                      <img src={imagePreview} alt="Preview" className="h-40 w-auto rounded-xl border object-cover" style={{ borderColor: theme.border }} />
+                    <div className="space-y-3">
+                      <div className="relative h-72 w-full overflow-hidden rounded-xl border" style={{ borderColor: theme.border }}>
+                        <Cropper
+                          image={imagePreview}
+                          crop={crop}
+                          zoom={zoom}
+                          aspect={cropperAspect}
+                          onCropChange={setCrop}
+                          onZoomChange={setZoom}
+                          onCropComplete={onCropComplete}
+                          onMediaLoaded={onMediaLoaded}
+                          showGrid
+                          objectFit="cover"
+                        />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <label className="text-xs font-bold uppercase tracking-wider text-primary-700">Zoom</label>
+                        <input
+                          type="range"
+                          min={1}
+                          max={3}
+                          step={0.05}
+                          value={zoom}
+                          onChange={(e) => setZoom(Number(e.target.value))}
+                          className="flex-1"
+                        />
+                      </div>
+                      {croppedImage && (
+                        <div>
+                          <label className="text-xs font-bold uppercase tracking-wider text-primary-700">Preview</label>
+                          <div className="mt-1">
+                            <img src={croppedImage} alt="Cropped preview" className="max-h-40 rounded-xl border object-cover" style={{ borderColor: theme.border }} />
+                          </div>
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={handleRemoveImage}
-                        className="absolute -top-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white shadow-md hover:bg-red-600"
+                        className="liquid-button inline-flex items-center gap-2 rounded-xl border border-dashed px-4 py-3 text-xs font-bold text-primary-700 transition-all hover:border-primary-400 hover:bg-primary-50"
+                        style={{ borderColor: theme.border }}
                       >
-                        ×
+                        Remove Image
                       </button>
                     </div>
                   ) : (
@@ -415,9 +593,14 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
                       )
                     )}
                   </div>
-                  <span className="text-[10px] font-semibold text-primary-600 whitespace-nowrap">
-                    {new Date(announcement.created_at).toLocaleString()}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-[10px] font-semibold text-primary-600 whitespace-nowrap">
+                      {new Date(announcement.created_at).toLocaleString()}
+                    </span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${statusStyles[getAnnouncementStatus(announcement)].bg} ${statusStyles[getAnnouncementStatus(announcement)].text}`}>
+                      {getAnnouncementStatus(announcement)}
+                    </span>
+                  </div>
                 </div>
 
                 {isSuperAdmin && (

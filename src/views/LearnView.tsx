@@ -15,6 +15,9 @@ import {
   SET2_LEVELS,
   SET2_TITLE,
   SET2_TOTAL_LEVELS,
+  SET3_LEVELS,
+  SET3_TITLE,
+  SET3_TOTAL_LEVELS,
   SET4_LEVELS,
   SET4_TITLE,
   SET4_TOTAL_LEVELS,
@@ -31,11 +34,14 @@ import {
   applyTanween,
   harakatItemKey,
   tanweenItemKey,
+  alphabetOrderKey,
   type HarakatLevel,
+  type AlphabetOrderLevel,
   type SetId,
 } from '@/data/learningSets';
 import { ARABIC_LETTERS, TOTAL_LETTERS, type ArabicLetter } from '@/data/letters';
 import { useCMSClass1Data } from '@/hooks/useCMSClass1Data';
+import { useCMSClass2Data } from '@/hooks/useCMSClass2Data';
 
 interface Props {
   onHome: () => void;
@@ -57,12 +63,14 @@ interface Props {
   wordsLearned: Set<string>;
   onToggleWord: (key: string) => void;
   onMarkWord: (key: string) => void;
+  alphabetOrderLearned: Set<string>;
+  onToggleAlphabetOrder: (key: string) => void;
   onResetLearning: () => void;
 }
 
 // Exact required activity keys for unlock/progress checks
-const SET2_REQUIRED_KEYS = SET2_LEVELS.flatMap((lvl) =>
-  lvl.items.map((item) => harakatItemKey(item.letter.index, item.haraka)),
+const SET3_REQUIRED_KEYS = SET3_LEVELS.flatMap((lvl) =>
+  lvl.items.map((item) => alphabetOrderKey(item.position))
 );
 const SET4_REQUIRED_KEYS = SET4_LEVELS.flatMap((lvl) =>
   lvl.items.map((_, index) => `s4-${lvl.level}-${index}`),
@@ -73,13 +81,13 @@ const SET5_REQUIRED_KEYS = SET5_LEVELS.flatMap((lvl) => [
 ]);
 const SET6_REQUIRED_KEYS = SET6_LEVELS.map((lvl) => `s6-l${lvl.level}`);
 
-const SET2_TOTAL_ITEMS = SET2_REQUIRED_KEYS.length;
+const SET3_TOTAL_ITEMS = SET3_REQUIRED_KEYS.length;
 const SET4_TOTAL_ITEMS = SET4_REQUIRED_KEYS.length;
 const SET5_TOTAL_ITEMS = SET5_REQUIRED_KEYS.length;
 const SET6_TOTAL_ITEMS = SET6_REQUIRED_KEYS.length;
 
 const AVAILABLE_SETS_BY_CLASS: Record<1 | 2 | 3, SetId[]> = {
-  1: ['set1', 'set2', 'set4'],
+  1: ['set1', 'set2', 'set3', 'set4'],
   2: ['set5', 'set6'],
   3: [],
 };
@@ -109,30 +117,57 @@ export function LearnView({
   const cms = useCMSClass1Data();
   const cmsLevels = (cms.usingCMS && cms.levels.length > 0) ? cms.levels : SET1_LEVELS;
   const cmsLetters = (cms.usingCMS && cms.letters.length > 0) ? cms.letters : ARABIC_LETTERS;
+  const cmsHarakatLevels = (cms.usingCMS && cms.harakatLevels.length > 0) ? cms.harakatLevels : SET2_LEVELS;
+  const cmsSukoonLevels = (cms.usingCMS && cms.sukoonLevels.length > 0) ? cms.sukoonLevels : SET4_LEVELS;
   const set1TotalLetters = cmsLetters.length;
 
-  const availableSets = AVAILABLE_SETS_BY_CLASS[selectedClass];
+  const effectiveSet2Levels = cmsHarakatLevels;
+  const set2RequiredKeys = effectiveSet2Levels.flatMap((lvl) =>
+    lvl.items.map((item) => harakatItemKey(item.letter.index, item.haraka)),
+  );
+  const set2TotalItems = set2RequiredKeys.length;
+  const set2TotalLevels = effectiveSet2Levels.length;
+
+  const effectiveSet4Levels = cmsSukoonLevels;
+  const set4RequiredKeys = effectiveSet4Levels.flatMap((lvl) =>
+    lvl.items.map((_, index) => `s4-${lvl.level}-${index}`),
+  );
+  const set4TotalItems = set4RequiredKeys.length;
+
+  const cmsClass2 = useCMSClass2Data();
+  const effectiveSet5Levels = (cmsClass2.usingCMS && cmsClass2.tanweenLevels.length > 0) ? cmsClass2.tanweenLevels : SET5_LEVELS;
+  const effectiveSet6Levels = (cmsClass2.usingCMS && cmsClass2.wordLevels.length > 0) ? cmsClass2.wordLevels : SET6_LEVELS;
+  const cmsWords = (cmsClass2.usingCMS && cmsClass2.words.length > 0) ? cmsClass2.words : ARABIC_WORDS;
+  const set5RequiredKeys = effectiveSet5Levels.flatMap((lvl) => [
+    ...lvl.items.map((item) => tanweenItemKey(item.letter.index, item.tanween)),
+    ...(lvl.readingItems ?? []).map((_, index) => `s5-read-${lvl.level}-${index}`),
+  ]);
+  const set5TotalItems = set5RequiredKeys.length;
+  const set5TotalLevels = effectiveSet5Levels.length;
   const [openSet, setOpenSet] = useState<SetId | undefined>(availableSets[0]);
   const [openLevel, setOpenLevel] = useState<number | null>(1);
   const [set1LetterIndexesByLevel, setSet1LetterIndexesByLevel] = useState<Record<number, number>>({});
 
   // ----- Completion checks -----
   const set1Complete = learned.size >= set1TotalLetters;
-  const set2Complete = SET2_REQUIRED_KEYS.every((key) => harakatLearned.has(key));
+  const set2Complete = set2RequiredKeys.every((key) => harakatLearned.has(key));
+  const set3Complete = SET3_REQUIRED_KEYS.every((key) => alphabetOrderLearned.has(key));
   const readingPracticeCompletedCount = SIMPLE_READING_PRACTICE_ITEMS.filter((item) => readingPracticeLearned.has(item.id)).length;
   const interactiveHarakatPracticeCompletedCount = interactiveHarakatPracticeLearned.size;
-  const set4Complete = SET4_REQUIRED_KEYS.every((key) => sukoonLearned.has(key));
-  const set5Complete = SET5_REQUIRED_KEYS.every((key) => tanweenLearned.has(key));
+  const set4Complete = set4RequiredKeys.every((key) => sukoonLearned.has(key));
+  const set5Complete = set5RequiredKeys.every((key) => tanweenLearned.has(key));
   const set6Complete = SET6_REQUIRED_KEYS.every((key) => wordsLearned.has(key));
 
-  const set2CompletedCount = SET2_REQUIRED_KEYS.filter((key) => harakatLearned.has(key)).length;
-  const set4CompletedCount = SET4_REQUIRED_KEYS.filter((key) => sukoonLearned.has(key)).length;
-  const set5CompletedCount = SET5_REQUIRED_KEYS.filter((key) => tanweenLearned.has(key)).length;
+  const set2CompletedCount = set2RequiredKeys.filter((key) => harakatLearned.has(key)).length;
+  const set3CompletedCount = SET3_REQUIRED_KEYS.filter((key) => alphabetOrderLearned.has(key)).length;
+  const set4CompletedCount = set4RequiredKeys.filter((key) => sukoonLearned.has(key)).length;
+  const set5CompletedCount = set5RequiredKeys.filter((key) => tanweenLearned.has(key)).length;
   const set6CompletedCount = SET6_REQUIRED_KEYS.filter((key) => wordsLearned.has(key)).length;
 
-  // ----- Unlock chain: 1 → 2 → 4 in Class 1; 5 → 6 in Class 2 -----
+  // ----- Unlock chain: 1 → 2 → 3 → 4 in Class 1; 5 → 6 in Class 2 -----
   const set2Unlocked = isSuperAdminMode ? true : selectedClass >= 1;
-  const set4Unlocked = isSuperAdminMode ? true : selectedClass >= 1 ? set2Complete : false;
+  const set3Unlocked = isSuperAdminMode ? true : selectedClass >= 1 ? set2Complete : false;
+  const set4Unlocked = isSuperAdminMode ? true : selectedClass >= 1 ? set3Complete : false;
   const set5Unlocked = isSuperAdminMode ? true : selectedClass === 2;
   const set6Unlocked = isSuperAdminMode ? true : selectedClass === 2 ? set5Complete : false;
 
@@ -152,24 +187,38 @@ export function LearnView({
     if (isSuperAdminMode) return true;
     if (!set2Unlocked) return false;
     if (level === 1) return true;
-    const prev = SET2_LEVELS[level - 2];
+    const prev = effectiveSet2Levels[level - 2];
     return prev.items.every((item) => harakatLearned.has(harakatItemKey(item.letter.index, item.haraka)));
   };
 
   const set2LevelCompletedCount = (level: HarakatLevel): number =>
     level.items.filter((item) => harakatLearned.has(harakatItemKey(item.letter.index, item.haraka))).length;
 
+  // ----- Set 3 helpers -----
+  const isSet3LevelUnlocked = (level: number): boolean => {
+    if (isSuperAdminMode) return true;
+    if (!set3Unlocked) return false;
+    if (level === 1) return true;
+    const prev = SET3_LEVELS[level - 2];
+    return prev.items.every((item) => alphabetOrderLearned.has(alphabetOrderKey(item.position)));
+  };
+
+  const set3LevelCompletedCount = (level: number): number => {
+    const lvl = SET3_LEVELS[level - 1];
+    return lvl.items.filter((item) => alphabetOrderLearned.has(alphabetOrderKey(item.position))).length;
+  };
+
   // ----- Set 4 helpers -----
   const isSet4LevelUnlocked = (level: number): boolean => {
     if (isSuperAdminMode) return true;
     if (!set4Unlocked) return false;
     if (level === 1) return true;
-    const prev = SET4_LEVELS[level - 2];
+    const prev = effectiveSet4Levels[level - 2];
     return prev.items.every((_, i) => sukoonLearned.has(`s4-${prev.level}-${i}`));
   };
 
   const set4LevelCompletedCount = (level: number): number => {
-    const lvl = SET4_LEVELS[level - 1];
+    const lvl = effectiveSet4Levels[level - 1];
     return lvl.items.filter((_, i) => sukoonLearned.has(`s4-${lvl.level}-${i}`)).length;
   };
 
@@ -178,20 +227,20 @@ export function LearnView({
     if (isSuperAdminMode) return true;
     if (!set5Unlocked) return false;
     if (level === 1) return true;
-    const prev = SET5_LEVELS[level - 2];
+    const prev = effectiveSet5Levels[level - 2];
     const prevKeys = prev.items.map((item) => tanweenItemKey(item.letter.index, item.tanween));
     return prevKeys.every((k) => tanweenLearned.has(k));
   };
 
   const set5LevelCompletedCount = (level: number): number => {
-    const lvl = SET5_LEVELS[level - 1];
+    const lvl = effectiveSet5Levels[level - 1];
     const itemKeys = lvl.items.map((item) => tanweenItemKey(item.letter.index, item.tanween));
     const readingKeys = (lvl.readingItems ?? []).map((_, index) => `s5-read-${lvl.level}-${index}`);
     return [...itemKeys, ...readingKeys].filter((key) => tanweenLearned.has(key)).length;
   };
 
   const set5LevelRequiredCount = (level: number): number => {
-    const lvl = SET5_LEVELS[level - 1];
+    const lvl = effectiveSet5Levels[level - 1];
     return lvl.items.length + (lvl.readingItems?.length ?? 0);
   };
 
@@ -200,7 +249,8 @@ export function LearnView({
     const unlockedMap: Record<SetId, boolean> = {
       set1: isSuperAdminMode ? true : selectedClass === 1,
       set2: isSuperAdminMode ? true : selectedClass >= 1,
-      set4: isSuperAdminMode ? true : selectedClass >= 1 ? set2Complete : false,
+      set3: isSuperAdminMode ? true : selectedClass >= 1 ? set2Complete : false,
+      set4: isSuperAdminMode ? true : selectedClass >= 1 ? set3Complete : false,
       set5: isSuperAdminMode ? true : selectedClass === 2,
       set6: isSuperAdminMode ? true : selectedClass === 2 ? set5Complete : false,
     };
@@ -244,7 +294,7 @@ export function LearnView({
     {
       id: 'set2',
       title: SET2_TITLE,
-      subtitle: set2Unlocked ? `${SET2_TOTAL_LEVELS} levels • ${set2CompletedCount}/${SET2_TOTAL_ITEMS} learned` : 'Complete Set 1 to unlock',
+      subtitle: set2Unlocked ? `${set2TotalLevels} levels • ${set2CompletedCount}/${set2TotalItems} learned` : 'Complete Set 1 to unlock',
       icon: Sparkles,
       unlocked: set2Unlocked,
       complete: set2Complete,
@@ -254,9 +304,21 @@ export function LearnView({
       iconInactiveCls: 'bg-gradient-to-br from-gold-400 to-gold-600 text-white',
     },
     {
+      id: 'set3',
+      title: SET3_TITLE,
+      subtitle: set3Unlocked ? `${SET3_TOTAL_LEVELS} levels • ${set3CompletedCount}/${SET3_TOTAL_ITEMS} learned` : 'Complete Set 2 to unlock',
+      icon: Star,
+      unlocked: set3Unlocked,
+      complete: set3Complete,
+      activeCls: 'from-primary-600 to-primary-800 text-white ring-primary-600',
+      inactiveUnlockedCls: 'bg-white text-primary-900 ring-primary-100 hover:-translate-y-0.5',
+      iconActiveCls: 'bg-white/20 text-white',
+      iconInactiveCls: 'bg-gradient-to-br from-primary-500 to-primary-700 text-white',
+    },
+    {
       id: 'set4',
       title: SET4_TITLE,
-      subtitle: set4Unlocked ? `${SET4_TOTAL_LEVELS} levels • ${set4CompletedCount}/${SET4_TOTAL_ITEMS} learned` : 'Complete Set 2 to unlock',
+      subtitle: set4Unlocked ? `${SET4_TOTAL_LEVELS} levels • ${set4CompletedCount}/${SET4_TOTAL_ITEMS} learned` : 'Complete Set 3 to unlock',
       icon: Moon,
       unlocked: set4Unlocked,
       complete: set4Complete,
@@ -268,7 +330,7 @@ export function LearnView({
     {
       id: 'set5',
       title: SET5_TITLE,
-      subtitle: set5Unlocked ? `${SET5_TOTAL_LEVELS} levels • ${set5CompletedCount}/${SET5_TOTAL_ITEMS} learned` : 'Switch to Class 2 to access',
+      subtitle: set5Unlocked ? `${set5TotalLevels} levels • ${set5CompletedCount}/${set5TotalItems} learned` : 'Switch to Class 2 to access',
       icon: Wind,
       unlocked: set5Unlocked,
       complete: set5Complete,
@@ -524,12 +586,12 @@ export function LearnView({
         <>
           <SetSummaryHeader
             title={SET2_TITLE}
-            subtitle={`${SET2_TOTAL_LEVELS} levels • vowel signs`}
-            count={`${set2CompletedCount}/${SET2_TOTAL_ITEMS}`}
+            subtitle={`${set2TotalLevels} levels • vowel signs`}
+            count={`${set2CompletedCount}/${set2TotalItems}`}
             countLabel="Combos learned"
             gradient="from-gold-500 to-gold-700"
             barColor="from-white to-white"
-            pct={Math.min(100, (set2CompletedCount / SET2_TOTAL_ITEMS) * 100)}
+            pct={Math.min(100, (set2CompletedCount / set2TotalItems) * 100)}
             icon={<Sparkles size={24} />}
             barBg="bg-white/20"
           />
@@ -564,7 +626,7 @@ export function LearnView({
             />
           </div>
           <div className="space-y-3">
-            {SET2_LEVELS.map((lvl) => {
+            {effectiveSet2Levels.map((lvl) => {
               const unlocked = isSet2LevelUnlocked(lvl.level);
               const completed = set2LevelCompletedCount(lvl);
               const allDone = completed === lvl.items.length;
@@ -643,6 +705,82 @@ export function LearnView({
         </>
       )}
 
+      {/* ---------- SET 3: Alphabet Order ---------- */}
+      {openSet === 'set3' && set3Unlocked && (
+        <>
+          <SetSummaryHeader
+            title={SET3_TITLE}
+            subtitle={`${SET3_TOTAL_LEVELS} levels • alphabet sequence`}
+            count={`${set3CompletedCount}/${SET3_TOTAL_ITEMS}`}
+            countLabel="Items learned"
+            gradient="from-primary-600 to-primary-800"
+            barColor="from-white to-white"
+            pct={Math.min(100, (set3CompletedCount / SET3_TOTAL_ITEMS) * 100)}
+            icon={<Star size={24} />}
+            barBg="bg-white/20"
+          />
+          <div className="space-y-3">
+            {SET3_LEVELS.map((lvl) => {
+              const unlocked = isSet3LevelUnlocked(lvl.level);
+              const completed = set3LevelCompletedCount(lvl.level);
+              const allDone = completed === lvl.items.length;
+              const isOpen = openLevel === lvl.level && unlocked;
+              return (
+                <LevelCard
+                  key={lvl.level}
+                  level={lvl.level}
+                  title={`Level ${lvl.level}`}
+                  subtitle={lvl.title}
+                  unlocked={unlocked}
+                  completed={completed}
+                  total={lvl.items.length}
+                  isOpen={isOpen}
+                  ringColor="ring-primary-50"
+                  unlockedBar="from-primary-500 to-primary-700"
+                  hoverColor="hover:bg-primary-50/40"
+                  chevronColor="text-primary-500"
+                  barBg="bg-primary-100"
+                  onClick={() => handleLevelClick(lvl.level, unlocked)}
+                >
+                  <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-7">
+                    {lvl.items.map((item) => {
+                      const key = alphabetOrderKey(item.position);
+                      const isLearned = alphabetOrderLearned.has(key);
+                      return (
+                        <button
+                          key={key}
+                          onClick={() => onToggleAlphabetOrder(key)}
+                          className={`group relative rounded-2xl p-2.5 text-center shadow-sm ring-1 transition-all active:scale-95 ${
+                            isLearned ? 'bg-green-50 ring-2 ring-green-400' : 'bg-white ring-primary-50 hover:-translate-y-0.5 hover:shadow-md'
+                          }`}
+                        >
+                          {isLearned && (
+                            <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-green-500 text-white shadow">
+                              <CheckCircle2 size={10} strokeWidth={3} />
+                            </span>
+                          )}
+                          <div className="flex h-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-50 to-white transition-transform group-hover:scale-105">
+                            <span className="font-arabic text-xl font-bold text-primary-900">{item.arabic}</span>
+                          </div>
+                          <p className="mt-1 text-[10px] font-bold text-primary-700">{item.english}</p>
+                          <p className="text-[10px] font-medium text-primary-700">#{item.position}</p>
+                          <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-primary-600">{isLearned ? 'Tap to undo' : 'Tap when learned'}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {!allDone && (
+                    <p className="mt-3 text-center text-xs text-primary-700/70">
+                      Complete all {lvl.items.length} letters to unlock Level {lvl.level + 1 <= SET3_TOTAL_LEVELS ? lvl.level + 1 : '—'}
+                    </p>
+                  )}
+                </LevelCard>
+              );
+            })}
+          </div>
+        </>
+      )}
+
       {/* ---------- SET 4: Sukoon ---------- */}
       {openSet === 'set4' && set4Unlocked && (
         <>
@@ -665,7 +803,7 @@ export function LearnView({
             </div>
           </div>
           <div className="space-y-3">
-            {SET4_LEVELS.map((lvl) => {
+            {effectiveSet4Levels.map((lvl) => {
               const unlocked = isSet4LevelUnlocked(lvl.level);
               const completed = set4LevelCompletedCount(lvl.level);
               const allDone = completed === lvl.items.length;
@@ -731,12 +869,12 @@ export function LearnView({
         <>
           <SetSummaryHeader
             title={SET5_TITLE}
-            subtitle={`${SET5_TOTAL_LEVELS} levels • double vowels`}
-            count={`${set5CompletedCount}/${SET5_TOTAL_ITEMS}`}
+            subtitle={`${set5TotalLevels} levels • double vowels`}
+            count={`${set5CompletedCount}/${set5TotalItems}`}
             countLabel="Items learned"
             gradient="from-primary-600 to-teal-700"
             barColor="from-white to-white"
-            pct={Math.min(100, (set5CompletedCount / SET5_TOTAL_ITEMS) * 100)}
+            pct={Math.min(100, (set5CompletedCount / set5TotalItems) * 100)}
             icon={<Wind size={24} />}
             barBg="bg-white/20"
           />
@@ -753,7 +891,7 @@ export function LearnView({
             })}
           </div>
           <div className="space-y-3">
-            {SET5_LEVELS.map((lvl) => {
+            {effectiveSet5Levels.map((lvl) => {
               const unlocked = isSet5LevelUnlocked(lvl.level);
               const completed = set5LevelCompletedCount(lvl.level);
               const totalRequired = set5LevelRequiredCount(lvl.level);
@@ -842,7 +980,7 @@ export function LearnView({
 
                   {!allDone && (
                     <p className="mt-3 text-center text-xs text-primary-700">
-                      Complete all {totalRequired} required items to unlock Level {lvl.level + 1 <= SET5_TOTAL_LEVELS ? lvl.level + 1 : '—'}
+                       Complete all {totalRequired} required items to unlock Level {lvl.level + 1 <= set5TotalLevels ? lvl.level + 1 : '—'}
                     </p>
                   )}
                 </LevelCard>
@@ -892,22 +1030,22 @@ export function LearnView({
                   onClick={() => handleLevelClick(lvl.level, unlocked)}
                 >
                   {lvl.level === 1 && (
-                    <WordLearnLevel wordsLearned={wordsLearned} onToggle={onToggleWord} onMark={onMarkWord} />
+                    <WordLearnLevel wordsLearned={wordsLearned} onToggle={onToggleWord} onMark={onMarkWord} words={cmsWords} />
                   )}
                   {lvl.level === 2 && (
-                    <WordMatchingLevel matchLang="malayalam" wordsLearned={wordsLearned} onComplete={onMarkWord} />
+                    <WordMatchingLevel matchLang="malayalam" wordsLearned={wordsLearned} onComplete={onMarkWord} words={cmsWords} />
                   )}
                   {lvl.level === 3 && (
-                    <WordMatchingLevel matchLang="english" wordsLearned={wordsLearned} onComplete={onMarkWord} />
+                    <WordMatchingLevel matchLang="english" wordsLearned={wordsLearned} onComplete={onMarkWord} words={cmsWords} />
                   )}
                   {lvl.level === 4 && (
-                    <WordMultipleChoiceLevel wordsLearned={wordsLearned} onComplete={onMarkWord} />
+                    <WordMultipleChoiceLevel wordsLearned={wordsLearned} onComplete={onMarkWord} words={cmsWords} />
                   )}
                   {lvl.level === 5 && (
-                    <WordMemoryLevel wordsLearned={wordsLearned} onComplete={onMarkWord} />
+                    <WordMemoryLevel wordsLearned={wordsLearned} onComplete={onMarkWord} words={cmsWords} />
                   )}
                   {lvl.level === 6 && (
-                    <WordMixedChallengeLevel wordsLearned={wordsLearned} onComplete={onMarkWord} />
+                    <WordMixedChallengeLevel wordsLearned={wordsLearned} onComplete={onMarkWord} words={cmsWords} />
                   )}
                   {!isLevelDone && (
                     <p className="mt-3 text-center text-xs text-gold-700/70">
@@ -924,22 +1062,25 @@ export function LearnView({
       {/* Locked set notice */}
       {openSet && openSet !== 'set1' && (
         (openSet === 'set2' && !set2Unlocked) ||
+        (openSet === 'set3' && !set3Unlocked) ||
         (openSet === 'set4' && !set4Unlocked) ||
         (openSet === 'set5' && !set5Unlocked) ||
         (openSet === 'set6' && !set6Unlocked)
       ) && (
           <LockedNotice
             title={
-              openSet === 'set2' ? SET2_TITLE : openSet === 'set4' ? SET4_TITLE : openSet === 'set5' ? SET5_TITLE : SET6_TITLE
+              openSet === 'set2' ? SET2_TITLE : openSet === 'set3' ? SET3_TITLE : openSet === 'set4' ? SET4_TITLE : openSet === 'set5' ? SET5_TITLE : SET6_TITLE
             }
             message={
               openSet === 'set2'
                 ? `Complete all 28 letters in ${SET1_TITLE} to unlock.`
-                : openSet === 'set4'
+                : openSet === 'set3'
                   ? `Complete all harakat in ${SET2_TITLE} to unlock.`
-                  : openSet === 'set5'
-                    ? 'Switch to Class 2 to access this set.'
-                    : 'Complete this set to unlock the next one.'
+                  : openSet === 'set4'
+                    ? `Complete ${SET3_TITLE} to unlock.`
+                    : openSet === 'set5'
+                      ? 'Switch to Class 2 to access this set.'
+                      : 'Complete this set to unlock the next one.'
             }
             onGoToSet1={() => handleSetClick('set1')}
           />

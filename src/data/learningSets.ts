@@ -83,6 +83,78 @@ export function harakatItemKey(letterIndex: number, haraka: HarakaType): string 
   return `${letterIndex}-${haraka}`;
 }
 
+// ---------- Set 3: Alphabet Order ----------
+
+export interface AlphabetOrderItem {
+  position: number;
+  arabic: string;
+  english: string;
+}
+
+export interface AlphabetOrderLevel {
+  level: number;
+  title: string;
+  description: string;
+  items: AlphabetOrderItem[];
+}
+
+const SET3_L1_POSITIONS = ARABIC_LETTERS.slice(0, 7).map((l) => l.index);
+const SET3_L2_POSITIONS = ARABIC_LETTERS.slice(7, 14).map((l) => l.index);
+const SET3_L3_POSITIONS = ARABIC_LETTERS.slice(14, 21).map((l) => l.index);
+const SET3_L4_POSITIONS = ARABIC_LETTERS.slice(21, 28).map((l) => l.index);
+
+export const SET3_TITLE = 'Set 3 — Alphabet Order';
+export const SET3_TOTAL_LEVELS = 5;
+
+export const SET3_LEVELS: AlphabetOrderLevel[] = [
+  {
+    level: 1,
+    title: 'Learn Alphabet Order',
+    description: 'Learn the first 7 letters in correct sequence',
+    items: SET3_L1_POSITIONS.map((pos) => {
+      const letter = ARABIC_LETTERS.find((l) => l.index === pos)!;
+      return { position: pos, arabic: letter.arabic, english: letter.english };
+    }),
+  },
+  {
+    level: 2,
+    title: 'Arrange the Letters',
+    description: 'Put the next 7 letters in the right order',
+    items: SET3_L2_POSITIONS.map((pos) => {
+      const letter = ARABIC_LETTERS.find((l) => l.index === pos)!;
+      return { position: pos, arabic: letter.arabic, english: letter.english };
+    }),
+  },
+  {
+    level: 3,
+    title: 'Find the Missing Letter',
+    description: 'Identify the missing letter in the alphabet',
+    items: SET3_L3_POSITIONS.map((pos) => {
+      const letter = ARABIC_LETTERS.find((l) => l.index === pos)!;
+      return { position: pos, arabic: letter.arabic, english: letter.english };
+    }),
+  },
+  {
+    level: 4,
+    title: 'What Comes Before/After?',
+    description: 'Practice what comes before and after each letter',
+    items: SET3_L4_POSITIONS.map((pos) => {
+      const letter = ARABIC_LETTERS.find((l) => l.index === pos)!;
+      return { position: pos, arabic: letter.arabic, english: letter.english };
+    }),
+  },
+  {
+    level: 5,
+    title: 'Alphabet Challenge',
+    description: 'Mixed review of the full alphabet',
+    items: ARABIC_LETTERS.map((l) => ({ position: l.index, arabic: l.arabic, english: l.english })),
+  },
+];
+
+export function alphabetOrderKey(position: number): string {
+  return `a3-${position}`;
+}
+
 // ---------- Set 4: Sukoon ----------
 
 export const SUKOON_MARK = '\u0652'; // ARABIC SUKUN
@@ -103,7 +175,7 @@ export interface SukoonLevel {
 export const SET4_TITLE = 'Set 4 — Sukoon';
 export const SET4_TOTAL_LEVELS = 5;
 
-function withSukoon(letter: string): string {
+export function withSukoon(letter: string): string {
   return letter + SUKOON_MARK;
 }
 
@@ -297,7 +369,7 @@ export const SET6_LEVELS: WordLevel[] = [
 
 // ---------- Sets registry ----------
 
-export type SetId = 'set1' | 'set2' | 'set4' | 'set5' | 'set6';
+export type SetId = 'set1' | 'set2' | 'set3' | 'set4' | 'set5' | 'set6';
 
 export interface SetMeta {
   id: SetId;
@@ -308,6 +380,7 @@ export interface SetMeta {
 export const SETS: SetMeta[] = [
   { id: 'set1', title: SET1_TITLE, totalLevels: SET1_TOTAL_LEVELS },
   { id: 'set2', title: SET2_TITLE, totalLevels: SET2_TOTAL_LEVELS },
+  { id: 'set3', title: SET3_TITLE, totalLevels: SET3_TOTAL_LEVELS },
   { id: 'set4', title: SET4_TITLE, totalLevels: SET4_TOTAL_LEVELS },
   { id: 'set5', title: SET5_TITLE, totalLevels: SET5_TOTAL_LEVELS },
   { id: 'set6', title: SET6_TITLE, totalLevels: SET6_TOTAL_LEVELS },

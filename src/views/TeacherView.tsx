@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Users, Trophy, PenTool, BookOpen, CheckCircle2, RotateCcw, Home,
-  Lock, LogOut, Plus, Save, Trash2, Edit3, ChevronRight, GraduationCap, Sparkles, Moon, Wind, Settings, Languages,
+  Lock, LogOut, Plus, Save, Trash2, Edit3, ChevronRight, GraduationCap, Sparkles, Star, Moon, Wind, Settings, Languages,
 } from 'lucide-react';
 import { TOTAL_LETTERS } from '@/data/letters';
 import { BackHeader } from '@/components/BackHeader';
@@ -10,6 +10,7 @@ import type { useTeacherCurriculum } from '@/hooks/useTeacherCurriculum';
 import {
   SET1_LEVELS, SET1_TITLE, SET1_TOTAL_LEVELS,
   SET2_LEVELS, SET2_TITLE, SET2_TOTAL_LEVELS,
+  SET3_LEVELS, SET3_TITLE, SET3_TOTAL_LEVELS,
   SET4_LEVELS, SET4_TITLE, SET4_TOTAL_LEVELS,
   SET5_LEVELS, SET5_TITLE, SET5_TOTAL_LEVELS,
   SET6_LEVELS, SET6_TITLE, SET6_TOTAL_LEVELS,
@@ -48,6 +49,10 @@ const SET_META: { id: SetId; title: string; totalLevels: number; icon: typeof Bo
   {
     id: 'set2', title: SET2_TITLE, totalLevels: SET2_TOTAL_LEVELS, icon: Sparkles,
     levels: SET2_LEVELS.map((l) => ({ level: l.level, title: l.title })),
+  },
+  {
+    id: 'set3', title: SET3_TITLE, totalLevels: SET3_TOTAL_LEVELS, icon: Star,
+    levels: SET3_LEVELS.map((l) => ({ level: l.level, title: l.title })),
   },
   {
     id: 'set4', title: SET4_TITLE, totalLevels: SET4_TOTAL_LEVELS, icon: Moon,

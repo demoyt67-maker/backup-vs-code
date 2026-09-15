@@ -39,6 +39,7 @@ export function useLearningProgress(selectedClass: ClassLevel) {
   const [sukoonLearned, setSukoonLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-sukoon-progress', selectedClass), isString));
   const [tanweenLearned, setTanweenLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-tanween-progress', selectedClass), isString));
   const [wordsLearned, setWordsLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-words-progress', selectedClass), isString));
+  const [alphabetOrderLearned, setAlphabetOrderLearned] = useState<Set<string>>(() => loadSet<string>(storageKey('madrasa-arabic-alphabet-order-progress', selectedClass), isString));
 
   useEffect(() => {
     setLearned(loadSet<number>(storageKey('madrasa-arabic-learn-progress', selectedClass), isLetterIndex));
@@ -48,6 +49,7 @@ export function useLearningProgress(selectedClass: ClassLevel) {
     setSukoonLearned(loadSet<string>(storageKey('madrasa-arabic-sukoon-progress', selectedClass), isString));
     setTanweenLearned(loadSet<string>(storageKey('madrasa-arabic-tanween-progress', selectedClass), isString));
     setWordsLearned(loadSet<string>(storageKey('madrasa-arabic-words-progress', selectedClass), isString));
+    setAlphabetOrderLearned(loadSet<string>(storageKey('madrasa-arabic-alphabet-order-progress', selectedClass), isString));
   }, [selectedClass]);
 
   // --- Set 1 letter ops ---
@@ -177,6 +179,17 @@ export function useLearningProgress(selectedClass: ClassLevel) {
     });
   }, [selectedClass]);
 
+  // --- Set 3 alphabet order ops ---
+  const toggleAlphabetOrder = useCallback((key: string) => {
+    setAlphabetOrderLearned((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      saveSet(storageKey('madrasa-arabic-alphabet-order-progress', selectedClass), next);
+      return next;
+    });
+  }, [selectedClass]);
+
   // --- Reset ---
   const resetLearning = useCallback(() => {
     const empty = new Set<number>();
@@ -187,6 +200,7 @@ export function useLearningProgress(selectedClass: ClassLevel) {
     setSukoonLearned(new Set());
     setTanweenLearned(new Set());
     setWordsLearned(new Set());
+    setAlphabetOrderLearned(new Set());
     saveSet(storageKey('madrasa-arabic-learn-progress', selectedClass), empty);
     saveSet(storageKey('madrasa-arabic-harakat-progress', selectedClass), new Set());
     saveSet(storageKey('madrasa-arabic-reading-practice-progress', selectedClass), new Set());
@@ -194,6 +208,7 @@ export function useLearningProgress(selectedClass: ClassLevel) {
     saveSet(storageKey('madrasa-arabic-sukoon-progress', selectedClass), new Set());
     saveSet(storageKey('madrasa-arabic-tanween-progress', selectedClass), new Set());
     saveSet(storageKey('madrasa-arabic-words-progress', selectedClass), new Set());
+    saveSet(storageKey('madrasa-arabic-alphabet-order-progress', selectedClass), new Set());
   }, [selectedClass]);
 
   return {
@@ -216,6 +231,8 @@ export function useLearningProgress(selectedClass: ClassLevel) {
     wordsLearned,
     toggleWord,
     markWord,
+    alphabetOrderLearned,
+    toggleAlphabetOrder,
     resetLearning,
   };
 }

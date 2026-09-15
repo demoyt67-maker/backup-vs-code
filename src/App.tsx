@@ -307,6 +307,7 @@ function App() {
     sukoonLearned, toggleSukoon,
     tanweenLearned, toggleTanween,
     wordsLearned, toggleWord, markWord,
+    alphabetOrderLearned, toggleAlphabetOrder,
     resetLearning,
   } = useLearningProgress(selectedClass ?? 1);
   const navigate = useCallback((v: View) => {
@@ -416,6 +417,8 @@ function App() {
             wordsLearned={wordsLearned}
             onToggleWord={toggleWord}
             onMarkWord={markWord}
+            alphabetOrderLearned={alphabetOrderLearned}
+            onToggleAlphabetOrder={toggleAlphabetOrder}
             onResetLearning={resetLearning}
             selectedClass={selectedClass}
             isSuperAdminMode={isSuperAdminMode}

@@ -17,14 +17,16 @@ export function WordLearnLevel({
   wordsLearned,
   onToggle,
   onMark,
+  words = ARABIC_WORDS,
 }: {
   wordsLearned: Set<string>;
   onToggle: (key: string) => void;
   onMark: (key: string) => void;
+  words?: ArabicWord[];
 }) {
   const categories = Object.keys(CATEGORY_LABELS) as WordCategory[];
   const allWordsLearned = useMemo(
-    () => ARABIC_WORDS.every((word) => wordsLearned.has(`s6-l1-${word.id}`)),
+    () => words.every((word) => wordsLearned.has(`s6-l1-${word.id}`)),
     [wordsLearned],
   );
 
@@ -45,7 +47,7 @@ export function WordLearnLevel({
   return (
     <div className="space-y-4">
       {categories.map((cat) => {
-        const catWords = ARABIC_WORDS.filter((w) => w.category === cat);
+        const catWords = words.filter((w) => w.category === cat);
         const catLabel = CATEGORY_LABELS[cat];
         return (
           <div key={cat}>
@@ -97,10 +99,12 @@ export function WordMatchingLevel({
   matchLang,
   wordsLearned,
   onComplete,
+  words = ARABIC_WORDS,
 }: {
   matchLang: 'malayalam' | 'english';
   wordsLearned: Set<string>;
   onComplete: (key: string) => void;
+  words?: ArabicWord[];
 }) {
   const levelKey = matchLang === 'malayalam' ? 's6-l2' : 's6-l3';
   const isCompleted = wordsLearned.has(levelKey);
@@ -117,7 +121,7 @@ export function WordMatchingLevel({
 
   const currentWords = useMemo(() => {
     void round;
-    return pickRandom(ARABIC_WORDS, WORDS_PER_ROUND);
+    return pickRandom(words, WORDS_PER_ROUND);
   }, [round]);
 
   // Shuffled meanings for the current round
@@ -290,9 +294,11 @@ export function WordMatchingLevel({
 export function WordMultipleChoiceLevel({
   wordsLearned,
   onComplete,
+  words = ARABIC_WORDS,
 }: {
   wordsLearned: Set<string>;
   onComplete: (key: string) => void;
+  words?: ArabicWord[];
 }) {
   const levelKey = 's6-l4';
   const isCompleted = wordsLearned.has(levelKey);
@@ -306,9 +312,9 @@ export function WordMultipleChoiceLevel({
 
   const { target, options } = useMemo(() => {
     void round;
-    const targetWord = pickRandom(ARABIC_WORDS, 1)[0];
+    const targetWord = pickRandom(words, 1)[0];
     const distractors = pickRandom(
-      ARABIC_WORDS.filter((w) => w.id !== targetWord.id),
+      words.filter((w) => w.id !== targetWord.id),
       3,
     );
     return { target: targetWord, options: shuffle([targetWord, ...distractors]) };
@@ -445,9 +451,11 @@ interface MemoryCard {
 export function WordMemoryLevel({
   wordsLearned,
   onComplete,
+  words = ARABIC_WORDS,
 }: {
   wordsLearned: Set<string>;
   onComplete: (key: string) => void;
+  words?: ArabicWord[];
 }) {
   const levelKey = 's6-l5';
   const isCompleted = wordsLearned.has(levelKey);
@@ -463,7 +471,7 @@ export function WordMemoryLevel({
   const TOTAL_ROUNDS = 2;
 
   const initRound = useCallback(() => {
-    const roundWords = pickRandom(ARABIC_WORDS, PAIRS_PER_ROUND);
+    const roundWords = pickRandom(words, PAIRS_PER_ROUND);
     const newCards: MemoryCard[] = [];
     roundWords.forEach((w) => {
       newCards.push({ id: `${w.id}-ar`, wordId: w.id, text: w.arabic, isArabic: true, flipped: false, matched: false });
@@ -633,9 +641,11 @@ type ChallengeType = 'match-malayalam' | 'match-english' | 'multiple-choice';
 export function WordMixedChallengeLevel({
   wordsLearned,
   onComplete,
+  words = ARABIC_WORDS,
 }: {
   wordsLearned: Set<string>;
   onComplete: (key: string) => void;
+  words?: ArabicWord[];
 }) {
   const levelKey = 's6-l6';
   const isCompleted = wordsLearned.has(levelKey);
@@ -660,13 +670,13 @@ export function WordMixedChallengeLevel({
     void round;
     if (isMatching) {
       return {
-        currentWords: pickRandom(ARABIC_WORDS, 4),
+        currentWords: pickRandom(words, 4),
         target: null,
         options: [],
       };
     } else {
-      const targetWord = pickRandom(ARABIC_WORDS, 1)[0];
-      const distractors = pickRandom(ARABIC_WORDS.filter((w) => w.id !== targetWord.id), 3);
+      const targetWord = pickRandom(words, 1)[0];
+      const distractors = pickRandom(words.filter((w) => w.id !== targetWord.id), 3);
       return {
         currentWords: [],
         target: targetWord,

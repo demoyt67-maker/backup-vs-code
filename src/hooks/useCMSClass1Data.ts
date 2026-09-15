@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { SET1_LEVELS } from '@/data/learningSets';
+import { SET1_LEVELS, SET2_LEVELS, SET3_LEVELS, SET4_LEVELS, type HarakatLevel, type HarakatItem, type HarakaType, type AlphabetOrderLevel, type SukoonLevel } from '@/data/learningSets';
 import { ARABIC_LETTERS } from '@/data/letters';
 import type { ArabicLetter, LetterLevel } from '@/data/learningSets';
 
@@ -10,6 +10,9 @@ const CACHE_TTL_MS = 30_000;
 interface CachedCMSData {
   lessons: Lesson[];
   letters: ArabicLetter[];
+  harakatLevels: HarakatLevel[];
+  alphabetOrderLevels: AlphabetOrderLevel[];
+  sukoonLevels: SukoonLevel[];
   timestamp: number;
 }
 
@@ -24,9 +27,39 @@ interface Lesson {
 export interface CMSClass1Data {
   levels: LetterLevel[];
   letters: ArabicLetter[];
+  harakatLevels: HarakatLevel[];
+  alphabetOrderLevels: AlphabetOrderLevel[];
+  sukoonLevels: SukoonLevel[];
   loading: boolean;
   error: string | null;
   usingCMS: boolean;
+}
+
+const HARAKA_MARK_MAP: Record<string, HarakaType> = {
+  '\u064E': 'fatha',
+  '\u0650': 'kasra',
+  '\u064F': 'damma',
+};
+
+function parseHarakatItems(rows: { arabic: string; english: string; position: number }[]): HarakatItem[] {
+  const items: HarakatItem[] = [];
+  for (const row of rows) {
+    let baseArabic = '';
+    let mark = '';
+    for (const letter of ARABIC_LETTERS) {
+      if (row.arabic.startsWith(letter.arabic)) {
+        baseArabic = letter.arabic;
+        mark = row.arabic.slice(letter.arabic.length);
+        break;
+      }
+    }
+    const staticLetter = ARABIC_LETTERS.find((l) => l.arabic === baseArabic);
+    const haraka = HARAKA_MARK_MAP[mark] || (row.english as HarakaType);
+    if (staticLetter && haraka) {
+      items.push({ letter: staticLetter, haraka });
+    }
+  }
+  return items;
 }
 
 function readCache(): CachedCMSData | null {
@@ -55,6 +88,9 @@ function writeCache(data: CachedCMSData) {
 export function useCMSClass1Data(): CMSClass1Data {
   const [levels, setLevels] = useState<LetterLevel[]>([]);
   const [letters, setLetters] = useState<ArabicLetter[]>([]);
+  const [harakatLevels, setHarakatLevels] = useState<HarakatLevel[]>([]);
+  const [alphabetOrderLevels, setAlphabetOrderLevels] = useState<AlphabetOrderLevel[]>([]);
+  const [sukoonLevels, setSukoonLevels] = useState<SukoonLevel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usingCMS, setUsingCMS] = useState(false);
@@ -80,6 +116,9 @@ export function useCMSClass1Data(): CMSClass1Data {
             if (!cancelled) {
               setLevels(cachedLevels);
               setLetters(cached.letters);
+              setHarakatLevels(cached.harakatLevels || []);
+              setAlphabetOrderLevels(cached.alphabetOrderLevels || []);
+              setSukoonLevels(cached.sukoonLevels || []);
               setUsingCMS(true);
               setLoading(false);
             }
@@ -105,6 +144,9 @@ export function useCMSClass1Data(): CMSClass1Data {
             setError(lessonsError ? `Failed to load CMS lessons: ${lessonsError.message}` : 'No active Class 1 lessons found');
             setLevels(SET1_LEVELS);
             setLetters(ARABIC_LETTERS);
+            setHarakatLevels(SET2_LEVELS);
+            setAlphabetOrderLevels(SET3_LEVELS);
+            setSukoonLevels(SET4_LEVELS);
             setUsingCMS(false);
             setLoading(false);
           }
@@ -123,6 +165,9 @@ export function useCMSClass1Data(): CMSClass1Data {
             setError(lettersError ? `Failed to load CMS letters: ${lettersError.message}` : 'No CMS letters found');
             setLevels(SET1_LEVELS);
             setLetters(ARABIC_LETTERS);
+            setHarakatLevels(SET2_LEVELS);
+            setAlphabetOrderLevels(SET3_LEVELS);
+            setSukoonLevels(SET4_LEVELS);
             setUsingCMS(false);
             setLoading(false);
           }
@@ -130,16 +175,25 @@ export function useCMSClass1Data(): CMSClass1Data {
         }
 
         const lettersByLessonId = new Map<string, ArabicLetter[]>();
+        const harakatItemsByLessonId = new Map<string, HarakatItem[]>();
         for (const cl of cmsLetters) {
-          const arr = lettersByLessonId.get(cl.lesson_id) ?? [];
-          const staticLetter = ARABIC_LETTERS.find((l) => l.arabic === cl.arabic);
-          arr.push({
-            index: staticLetter ? staticLetter.index : cl.position,
-            arabic: cl.arabic,
-            english: cl.english,
-            malayalam: staticLetter ? staticLetter.malayalam : cl.english,
-          });
-          lettersByLessonId.set(cl.lesson_id, arr);
+          if (cl.lesson_id) {
+            if (cl.lesson_id.startsWith('set2-level-')) {
+              const arr = harakatItemsByLessonId.get(cl.lesson_id) ?? [];
+              arr.push(...parseHarakatItems([cl]));
+              harakatItemsByLessonId.set(cl.lesson_id, arr);
+            } else {
+              const arr = lettersByLessonId.get(cl.lesson_id) ?? [];
+              const staticLetter = ARABIC_LETTERS.find((l) => l.arabic === cl.arabic);
+              arr.push({
+                index: staticLetter ? staticLetter.index : cl.position,
+                arabic: cl.arabic,
+                english: cl.english,
+                malayalam: staticLetter ? staticLetter.malayalam : cl.english,
+              });
+              lettersByLessonId.set(cl.lesson_id, arr);
+            }
+          }
         }
 
         const allCMSEntries = cmsLessons.filter((l) => l.lesson_key?.startsWith('set1-level-'));
@@ -148,11 +202,58 @@ export function useCMSClass1Data(): CMSClass1Data {
           letters: lettersByLessonId.get(l.id) ?? [],
         }));
 
+        const set2CMSEntries = cmsLessons.filter((l) => l.lesson_key?.startsWith('set2-level-'));
+        const cmsHarakatLevels: HarakatLevel[] = set2CMSEntries.map((l, i) => {
+          const items = harakatItemsByLessonId.get(l.id) ?? [];
+          const fallback = SET2_LEVELS[i];
+          return {
+            level: i + 1,
+            title: l.title || fallback?.title || `Level ${i + 1}`,
+            harakat: fallback?.harakat || [],
+            letters: fallback?.letters || [],
+            items,
+          };
+        });
+
+        const set3CMSEntries = cmsLessons.filter((l) => l.lesson_key?.startsWith('set3-level-'));
+        const cmsAlphabetOrderLevels: AlphabetOrderLevel[] = set3CMSEntries.map((l, i) => {
+          const items = lettersByLessonId.get(l.id) ?? [];
+          const fallback = SET3_LEVELS[i];
+          return {
+            level: i + 1,
+            title: l.title || fallback?.title || `Level ${i + 1}`,
+            description: l.description || fallback?.description || '',
+            items: items.map((letter, idx) => ({
+              position: idx + 1,
+              arabic: letter.arabic,
+              english: letter.english,
+            })),
+          };
+        });
+
+        const set4CMSEntries = cmsLessons.filter((l) => l.lesson_key?.startsWith('set4-level-'));
+        const cmsSukoonLevels: SukoonLevel[] = set4CMSEntries.map((l, i) => {
+          const items = lettersByLessonId.get(l.id) ?? [];
+          const fallback = SET4_LEVELS[i];
+          return {
+            level: i + 1,
+            title: l.title || fallback?.title || `Level ${i + 1}`,
+            items: items.map((letter) => ({
+              arabic: letter.arabic,
+              label: letter.english,
+              malayalam: letter.malayalam,
+            })),
+          };
+        });
+
         if (cmsLevels.length === 0 || cmsLevels.some((lvl) => !Array.isArray(lvl.letters) || lvl.letters.length === 0)) {
           if (!cancelled) {
             setError('CMS Class 1 data is incomplete or invalid');
             setLevels(SET1_LEVELS);
             setLetters(ARABIC_LETTERS);
+            setHarakatLevels(SET2_LEVELS);
+            setAlphabetOrderLevels(SET3_LEVELS);
+            setSukoonLevels(SET4_LEVELS);
             setUsingCMS(false);
             setLoading(false);
           }
@@ -160,7 +261,6 @@ export function useCMSClass1Data(): CMSClass1Data {
         }
 
         const allLetters = cmsLevels.flatMap((lvl) => lvl.letters);
-        // Deduplicate by arabic character
         const seen = new Set<string>();
         const uniqueLetters: ArabicLetter[] = [];
         for (const letter of allLetters) {
@@ -173,12 +273,18 @@ export function useCMSClass1Data(): CMSClass1Data {
         writeCache({
           lessons: cmsLessons,
           letters: uniqueLetters,
+          harakatLevels: cmsHarakatLevels,
+          alphabetOrderLevels: cmsAlphabetOrderLevels,
+          sukoonLevels: cmsSukoonLevels,
           timestamp: Date.now(),
         });
 
         if (!cancelled) {
           setLevels(cmsLevels);
           setLetters(uniqueLetters);
+          setHarakatLevels(cmsHarakatLevels);
+          setAlphabetOrderLevels(cmsAlphabetOrderLevels);
+          setSukoonLevels(cmsSukoonLevels);
           setUsingCMS(true);
           setLoading(false);
         }
@@ -186,6 +292,9 @@ export function useCMSClass1Data(): CMSClass1Data {
         if (!cancelled) {
           setLevels(SET1_LEVELS);
           setLetters(ARABIC_LETTERS);
+          setHarakatLevels(SET2_LEVELS);
+          setAlphabetOrderLevels(SET3_LEVELS);
+          setSukoonLevels(SET4_LEVELS);
           setUsingCMS(false);
           setError('Failed to load CMS data');
           setLoading(false);
@@ -201,7 +310,7 @@ export function useCMSClass1Data(): CMSClass1Data {
   }, []);
 
   return useMemo(
-    () => ({ levels, letters, loading, error, usingCMS }),
-    [levels, letters, loading, error, usingCMS]
+    () => ({ levels, letters, harakatLevels, alphabetOrderLevels, sukoonLevels, loading, error, usingCMS }),
+    [levels, letters, harakatLevels, alphabetOrderLevels, sukoonLevels, loading, error, usingCMS]
   );
 }

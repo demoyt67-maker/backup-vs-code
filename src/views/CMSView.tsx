@@ -3,7 +3,7 @@ import type { View } from '@/types';
 import { CLASS_THEMES } from '@/theme';
 import { ArrowLeft, Plus, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
-import { SET1_TITLE, SET1_LEVELS, type LetterLevel } from '@/data/learningSets';
+import { SET1_TITLE, SET1_LEVELS, SET5_TITLE, SET5_LEVELS, SET6_TITLE, SET6_LEVELS, type LetterLevel } from '@/data/learningSets';
 import { ARABIC_LETTERS } from '@/data/letters';
 
 type Theme = (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
@@ -26,21 +26,21 @@ const CMS_SECTIONS: { key: CMSSection; title: string; description: string; icon:
   {
     key: 'class1',
     title: 'Class 1 Content',
-    description: 'Manage letters, words, and learning materials for Class 1.',
+    description: 'Manage letters, harakat, sukoon, and learning materials for Class 1.',
     icon: '📝',
     accent: 'linear-gradient(135deg, #ffb8c9 0%, #ffd678 50%, #7adbc4 100%)',
   },
   {
     key: 'class2',
     title: 'Class 2 Content',
-    description: 'Manage letters, harakat, and practice materials for Class 2.',
+    description: 'Manage tanween, words, and advanced practice materials for Class 2.',
     icon: '📖',
     accent: 'linear-gradient(135deg, #90b5ff 0%, #5e77ef 48%, #ffc57a 100%)',
   },
   {
     key: 'class3',
     title: 'Class 3 Content',
-    description: 'Manage advanced practice, quizzes, and word activities for Class 3.',
+    description: 'Class 3 is currently empty.',
     icon: '📚',
     accent: 'linear-gradient(135deg, #c9b9ff 0%, #756ae7 48%, #f7bf6d 100%)',
   },
@@ -86,7 +86,34 @@ function buildClass1Lessons(): Lesson[] {
   return lessons;
 }
 
+function buildClass2Lessons(): Lesson[] {
+  const lessons: Lesson[] = [
+    {
+      id: 'set5',
+      title: SET5_TITLE,
+      description: `${SET5_LEVELS.length} levels · tanween and reading practice`,
+    },
+    ...SET5_LEVELS.map((level) => ({
+      id: `set5-level-${level.level}`,
+      title: level.title,
+      description: level.items.map((item) => `${item.letter.english} + ${item.tanween}`).join(', '),
+    })),
+    {
+      id: 'set6',
+      title: SET6_TITLE,
+      description: `${SET6_LEVELS.length} levels · words & fun activities`,
+    },
+    ...SET6_LEVELS.map((level) => ({
+      id: `set6-level-${level.level}`,
+      title: level.title,
+      description: level.description,
+    })),
+  ];
+  return lessons;
+}
+
 const FALLBACK_LESSONS = buildClass1Lessons();
+const FALLBACK_CLASS2_LESSONS = buildClass2Lessons();
 
 function EditLessonForm({ lesson, theme, onCancel, onSave }: { lesson: Lesson; theme: Theme; onCancel: () => void; onSave: (lessonId: string, title: string, arabicLetters: string[], englishNames: string[]) => Promise<void> }) {
   const isLevel = lesson.id.startsWith('set1-level-');
@@ -479,11 +506,193 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
   );
 }
 
+function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () => void }) {
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
+  const cancelledRef = useRef(false);
+
+  useEffect(() => {
+    cancelledRef.current = false;
+    loadLessons();
+    return () => {
+      cancelledRef.current = true;
+    };
+  }, []);
+
+  async function loadLessons() {
+    try {
+      setLoading(true);
+      setSaveStatus(null);
+
+      const { data: cmsLessons, error } = await supabase
+        .from('cms_lessons')
+        .select('*')
+        .eq('class_level', 2)
+        .order('sort_order', { ascending: true });
+
+      if (cancelledRef.current) return;
+
+      if (error || !cmsLessons || cmsLessons.length === 0) {
+        if (error) {
+          setSaveStatus({ type: 'error', message: `Failed to load CMS lessons: ${error.message || 'Unknown error'}` });
+        }
+        setLessons(FALLBACK_CLASS2_LESSONS);
+        setLoading(false);
+        return;
+      }
+
+      const lessonsWithLetters = cmsLessons.map((cmsLesson) => {
+        const fallback = FALLBACK_CLASS2_LESSONS.find((l) => l.id === cmsLesson.lesson_key);
+        return {
+          id: cmsLesson.lesson_key,
+          title: cmsLesson.title,
+          description: cmsLesson.description || fallback?.description || '',
+        };
+      });
+
+      if (cancelledRef.current) return;
+
+      setLessons(lessonsWithLetters);
+    } catch {
+      if (!cancelledRef.current) {
+        setSaveStatus({ type: 'error', message: 'Failed to load CMS data from database' });
+        setLessons(FALLBACK_CLASS2_LESSONS);
+      }
+    } finally {
+      if (!cancelledRef.current) {
+        setLoading(false);
+      }
+    }
+  }
+
+  async function handleSave(lessonId: string, title: string) {
+    const existingLesson = lessons.find((l) => l.id === lessonId);
+    const sortOrder = existingLesson ? lessons.indexOf(existingLesson) + 1 : lessons.length + 1;
+
+    const { data: savedLesson, error } = await supabase
+      .from('cms_lessons')
+      .upsert({
+        class_level: 2,
+        lesson_key: lessonId,
+        title,
+        description: existingLesson?.description || '',
+        sort_order: sortOrder,
+        is_active: true,
+      })
+      .select()
+      .single();
+
+    if (error || !savedLesson) {
+      throw new Error(error?.message || 'Failed to save lesson');
+    }
+
+    setSaveStatus({ type: 'success', message: 'Changes saved successfully!' });
+    await loadLessons();
+  }
+
+  if (editingLesson) {
+    return (
+      <EditLessonForm
+        lesson={editingLesson}
+        theme={theme}
+        onCancel={() => {
+          setEditingLesson(null);
+          setSaveStatus(null);
+        }}
+        onSave={async (lessonId, title) => {
+          await handleSave(lessonId, title);
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className="animate-fade-in">
+      <div className="mb-6">
+        <button
+          onClick={onBack}
+          className="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-700 transition-all hover:-translate-y-0.5 hover:shadow-md"
+          style={{ background: theme.accentSoft }}
+        >
+          <ArrowLeft size={16} />
+          Back to Content Management
+        </button>
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 className="text-2xl font-black text-primary-900 md:text-3xl">Class 2 Content</h2>
+            <p className="mt-1 text-sm text-primary-700">
+              Manage tanween, words, and advanced practice materials for Class 2.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {saveStatus && (
+        <div
+          className={`mb-4 rounded-2xl border px-4 py-3 text-sm font-semibold ${
+            saveStatus.type === 'success'
+              ? 'border-green-200 bg-green-50 text-green-700'
+              : 'border-red-200 bg-red-50 text-red-700'
+          }`}
+        >
+          {saveStatus.message}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="liquid-panel flex items-center justify-center rounded-[1.4rem] border py-12" style={{ border: `1px solid ${theme.border}`, background: theme.surface }}>
+          <div className="text-center">
+            <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-primary-200 border-t-primary-700"></div>
+            <p className="text-sm font-medium text-primary-700">Loading CMS data...</p>
+          </div>
+        </div>
+      ) : (
+        <div className="liquid-panel overflow-hidden rounded-[1.4rem] border shadow-sm" style={{ border: `1px solid ${theme.border}`, background: theme.surface }}>
+          <div className="divide-y" style={{ borderColor: theme.border }}>
+            {lessons.map((lesson) => (
+              <div
+                key={lesson.id}
+                className="flex flex-col gap-3 p-4 transition-all hover:bg-white/50 md:flex-row md:items-center md:justify-between"
+              >
+                <div className="flex-1">
+                  <h3 className="text-sm font-bold text-primary-900">{lesson.title}</h3>
+                  <p className="mt-1 text-xs text-primary-700">{lesson.description}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setEditingLesson(lesson)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition-all hover:-translate-y-0.5 hover:shadow-sm"
+                  >
+                    <Pencil size={14} />
+                    Edit
+                  </button>
+                  <button
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition-all hover:-translate-y-0.5 hover:shadow-sm"
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CMSView({ onNavigate, theme }: Props) {
   const [selectedSection, setSelectedSection] = useState<CMSSection | null>(null);
 
   if (selectedSection === 'class1') {
     return <Class1ContentManagement theme={theme} onBack={() => setSelectedSection(null)} />;
+  }
+
+  if (selectedSection === 'class2') {
+    return <Class2ContentManagement theme={theme} onBack={() => setSelectedSection(null)} />;
   }
 
   return (
@@ -505,7 +714,7 @@ export function CMSView({ onNavigate, theme }: Props) {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {CMS_SECTIONS.map((section, index) => {
-          const isClickable = section.key === 'class1';
+          const isClickable = section.key === 'class1' || section.key === 'class2';
           return (
             <button
               key={section.key}
@@ -543,7 +752,7 @@ export function CMSView({ onNavigate, theme }: Props) {
                 className="border-t px-5 py-3 text-xs font-semibold text-primary-600"
                 style={{ borderColor: theme.border, background: theme.accentSoft }}
               >
-                {isClickable ? 'Click to manage Class 1 content.' : 'Database connection and content editing coming soon.'}
+                {isClickable ? `Click to manage ${section.title.toLowerCase()}.` : 'Database connection and content editing coming soon.'}
               </div>
             </button>
           );

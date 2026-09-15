@@ -79,9 +79,9 @@ const SET5_TOTAL_ITEMS = SET5_REQUIRED_KEYS.length;
 const SET6_TOTAL_ITEMS = SET6_REQUIRED_KEYS.length;
 
 const AVAILABLE_SETS_BY_CLASS: Record<1 | 2 | 3, SetId[]> = {
-  1: ['set1'],
-  2: ['set2', 'set4'],
-  3: ['set5', 'set6'],
+  1: ['set1', 'set2', 'set4'],
+  2: ['set5', 'set6'],
+  3: [],
 };
 
 export function LearnView({
@@ -112,7 +112,7 @@ export function LearnView({
   const set1TotalLetters = cmsLetters.length;
 
   const availableSets = AVAILABLE_SETS_BY_CLASS[selectedClass];
-  const [openSet, setOpenSet] = useState<SetId>(availableSets[0]);
+  const [openSet, setOpenSet] = useState<SetId | undefined>(availableSets[0]);
   const [openLevel, setOpenLevel] = useState<number | null>(1);
   const [set1LetterIndexesByLevel, setSet1LetterIndexesByLevel] = useState<Record<number, number>>({});
 
@@ -130,11 +130,11 @@ export function LearnView({
   const set5CompletedCount = SET5_REQUIRED_KEYS.filter((key) => tanweenLearned.has(key)).length;
   const set6CompletedCount = SET6_REQUIRED_KEYS.filter((key) => wordsLearned.has(key)).length;
 
-  // ----- Unlock chain: 1 → 2 → 4 → 5 → 6 -----
-  const set2Unlocked = isSuperAdminMode ? true : selectedClass >= 2;
-  const set4Unlocked = isSuperAdminMode ? true : selectedClass === 2 ? set2Complete : selectedClass === 3;
-  const set5Unlocked = isSuperAdminMode ? true : selectedClass === 3;
-  const set6Unlocked = isSuperAdminMode ? true : selectedClass === 3 ? set5Complete : false;
+  // ----- Unlock chain: 1 → 2 → 4 in Class 1; 5 → 6 in Class 2 -----
+  const set2Unlocked = isSuperAdminMode ? true : selectedClass >= 1;
+  const set4Unlocked = isSuperAdminMode ? true : selectedClass >= 1 ? set2Complete : false;
+  const set5Unlocked = isSuperAdminMode ? true : selectedClass === 2;
+  const set6Unlocked = isSuperAdminMode ? true : selectedClass === 2 ? set5Complete : false;
 
   // ----- Set 1 helpers -----
   const isSet1LevelUnlocked = (level: number): boolean => {
@@ -199,10 +199,10 @@ export function LearnView({
   const handleSetClick = (set: SetId) => {
     const unlockedMap: Record<SetId, boolean> = {
       set1: isSuperAdminMode ? true : selectedClass === 1,
-      set2: isSuperAdminMode ? true : selectedClass >= 2,
-      set4: isSuperAdminMode ? true : selectedClass === 2 ? set2Complete : selectedClass === 3,
-      set5: isSuperAdminMode ? true : selectedClass === 3,
-      set6: isSuperAdminMode ? true : selectedClass === 3 ? set5Complete : false,
+      set2: isSuperAdminMode ? true : selectedClass >= 1,
+      set4: isSuperAdminMode ? true : selectedClass >= 1 ? set2Complete : false,
+      set5: isSuperAdminMode ? true : selectedClass === 2,
+      set6: isSuperAdminMode ? true : selectedClass === 2 ? set5Complete : false,
     };
     if (!unlockedMap[set]) return;
     setOpenSet(set);
@@ -268,7 +268,7 @@ export function LearnView({
     {
       id: 'set5',
       title: SET5_TITLE,
-      subtitle: set5Unlocked ? `${SET5_TOTAL_LEVELS} levels • ${set5CompletedCount}/${SET5_TOTAL_ITEMS} learned` : 'Complete Set 4 to unlock',
+      subtitle: set5Unlocked ? `${SET5_TOTAL_LEVELS} levels • ${set5CompletedCount}/${SET5_TOTAL_ITEMS} learned` : 'Switch to Class 2 to access',
       icon: Wind,
       unlocked: set5Unlocked,
       complete: set5Complete,
@@ -922,14 +922,12 @@ export function LearnView({
       )}
 
       {/* Locked set notice */}
-      {(['set2', 'set4', 'set5', 'set6'] as const).includes(openSet as 'set2' | 'set4' | 'set5' | 'set6') &&
-        openSet !== 'set1' &&
-        !(
-          (openSet === 'set2' && set2Unlocked) ||
-          (openSet === 'set4' && set4Unlocked) ||
-          (openSet === 'set5' && set5Unlocked) ||
-          (openSet === 'set6' && set6Unlocked)
-        ) && (
+      {openSet && openSet !== 'set1' && (
+        (openSet === 'set2' && !set2Unlocked) ||
+        (openSet === 'set4' && !set4Unlocked) ||
+        (openSet === 'set5' && !set5Unlocked) ||
+        (openSet === 'set6' && !set6Unlocked)
+      ) && (
           <LockedNotice
             title={
               openSet === 'set2' ? SET2_TITLE : openSet === 'set4' ? SET4_TITLE : openSet === 'set5' ? SET5_TITLE : SET6_TITLE
@@ -940,8 +938,8 @@ export function LearnView({
                 : openSet === 'set4'
                   ? `Complete all harakat in ${SET2_TITLE} to unlock.`
                   : openSet === 'set5'
-                    ? `Complete all items in ${SET4_TITLE} to unlock.`
-                    : `Complete all items in ${SET5_TITLE} to unlock.`
+                    ? 'Switch to Class 2 to access this set.'
+                    : 'Complete this set to unlock the next one.'
             }
             onGoToSet1={() => handleSetClick('set1')}
           />

@@ -58,6 +58,8 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [croppedImage, setCroppedImage] = useState<string | null>(null);
+  const [originalSize, setOriginalSize] = useState<{ width: number; height: number } | null>(null);
+  const [originalAspectRatio, setOriginalAspectRatio] = useState<string | null>(null);
   const [crop, setCrop] = useState<Crop>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [uploading, setUploading] = useState(false);
@@ -157,6 +159,8 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
     setImageFile(null);
     setImagePreview(null);
     setCroppedImage(null);
+    setOriginalSize(null);
+    setOriginalAspectRatio(null);
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setExpiresAt(null);
@@ -281,6 +285,8 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
       setExpiresAt(null);
       setNeverExpires(true);
     }
+    setOriginalSize(null);
+    setOriginalAspectRatio(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -301,10 +307,24 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
     setCroppedImage(null);
     setCrop({ x: 0, y: 0 });
     setZoom(1);
-    setAspectRatio(null);
-    setCropperAspect(undefined);
+    setOriginalSize(null);
+    setOriginalAspectRatio(null);
     const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      setImagePreview(result);
+      const img = new Image();
+      img.onload = () => {
+        const width = img.naturalWidth;
+        const height = img.naturalHeight;
+        setOriginalSize({ width, height });
+        const gcd = (a: number, b: number) => b ? gcd(b, a % b) : a;
+        const divisor = gcd(width, height);
+        const ratioString = `${width / divisor}:${height / divisor}`;
+        setOriginalAspectRatio(ratioString);
+      };
+      img.src = result;
+    };
     reader.readAsDataURL(file);
   };
 
@@ -312,22 +332,21 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
     setImageFile(null);
     setImagePreview(null);
     setCroppedImage(null);
+    setOriginalSize(null);
+    setOriginalAspectRatio(null);
     setCrop({ x: 0, y: 0 });
     setZoom(1);
-    setAspectRatio(null);
-    setCropperAspect(undefined);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const onMediaLoaded = (mediaSize: { naturalWidth: number; naturalHeight: number }) => {
     const { naturalWidth, naturalHeight } = mediaSize;
     if (!naturalWidth || !naturalHeight) return;
-    const aspect = naturalWidth / naturalHeight;
+    setOriginalSize({ width: naturalWidth, height: naturalHeight });
     const gcd = (a: number, b: number) => b ? gcd(b, a % b) : a;
     const divisor = gcd(naturalWidth, naturalHeight);
-    const ratioString = `${naturalWidth / divisor}/${naturalHeight / divisor}`;
-    setCropperAspect(aspect);
-    setAspectRatio(ratioString);
+    const ratioString = `${naturalWidth / divisor}:${naturalHeight / divisor}`;
+    setOriginalAspectRatio(ratioString);
     setCrop({ x: 0, y: 0 });
     setZoom(1);
   };
@@ -482,11 +501,10 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
                           image={imagePreview}
                           crop={crop}
                           zoom={zoom}
-                          aspect={cropperAspect}
+                          aspect={5 / 1}
                           onCropChange={setCrop}
                           onZoomChange={setZoom}
                           onCropComplete={onCropComplete}
-                          onMediaLoaded={onMediaLoaded}
                           showGrid
                           objectFit="cover"
                         />
@@ -503,11 +521,31 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
                           className="flex-1"
                         />
                       </div>
+                      {originalSize && originalAspectRatio && (
+                        <div className="rounded-xl border bg-primary-50/50 p-3" style={{ borderColor: theme.border }}>
+                          <p className="text-xs font-semibold text-primary-900">
+                            Original size: {originalSize.width} × {originalSize.height}
+                          </p>
+                          <p className="text-xs font-semibold text-primary-900">
+                            Aspect ratio: {originalAspectRatio}
+                          </p>
+                          <p className="text-xs text-primary-700">
+                            Home Screen banner ratio: 5:1
+                          </p>
+                          <p className="text-xs font-semibold text-primary-900">
+                            {originalAspectRatio === '5:1'
+                              ? '✓ This image fits the Home Screen banner ratio.'
+                              : 'This image has a different ratio. Crop it to 5:1 to fit the Home Screen banner.'}
+                          </p>
+                        </div>
+                      )}
                       {croppedImage && (
                         <div>
                           <label className="text-xs font-bold uppercase tracking-wider text-primary-700">Preview</label>
                           <div className="mt-1">
-                            <img src={croppedImage} alt="Cropped preview" className="max-h-40 rounded-xl border object-cover" style={{ borderColor: theme.border }} />
+                            <div className="w-full overflow-hidden rounded-xl border" style={{ aspectRatio: '5/1', borderColor: theme.border }}>
+                              <img src={croppedImage} alt="Cropped preview" className="h-full w-full object-cover" />
+                            </div>
                           </div>
                         </div>
                       )}

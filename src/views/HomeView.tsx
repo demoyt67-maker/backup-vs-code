@@ -65,8 +65,8 @@ export function HomeView({
   const dashboardCards = [
     {
       title: 'Continue Learning',
-      value: selectedClass === 1 ? 'Letters' : selectedClass === 2 ? 'Harakat & Reading' : 'Advanced Sets',
-      detail: selectedClass === 1 ? 'Keep practicing Arabic letters.' : selectedClass === 2 ? 'Move through structured Class 2 learning.' : 'Explore the full advanced pathway.',
+      value: selectedClass === 1 ? 'Letters, Harakat & Symbols' : selectedClass === 2 ? 'Tanween & Words' : 'No content yet',
+      detail: selectedClass === 1 ? 'Beginner to intermediate Arabic practice.' : selectedClass === 2 ? 'Advanced practice with words and double vowels.' : 'Content coming soon.',
       tint: theme.card1,
     },
     {
@@ -83,8 +83,8 @@ export function HomeView({
     },
     {
       title: 'Current Set',
-      value: selectedClass === 1 ? 'Set 1' : selectedClass === 2 ? 'Set 2' : 'Set 5',
-      detail: selectedClass === 1 ? 'Individual letters focus' : selectedClass === 2 ? 'Harakat and reading practice' : 'Advanced activities',
+      value: selectedClass === 1 ? 'Set 1' : selectedClass === 2 ? 'Set 5' : '—',
+      detail: selectedClass === 1 ? 'Letters, harakat, and sukoon' : selectedClass === 2 ? 'Tanween and word activities' : 'No active content',
       tint: 'linear-gradient(135deg, rgba(255,255,255,0.24), rgba(255,255,255,0.14))',
     },
   ];
@@ -267,9 +267,21 @@ export function HomeView({
     };
 
     const renderItem = (announcement: Announcement) => {
-      const isImage = announcement.announcement_type === 'image';
-      const displayTitle = isImage && !announcement.title.trim() ? 'Announcement' : announcement.title;
-      const displayMessage = isImage ? '' : announcement.message;
+      if (announcement.announcement_type === 'image' && announcement.image_url) {
+        return (
+          <div className="w-full">
+            <div className="w-full overflow-hidden rounded-lg" style={{ aspectRatio: '5/1' }}>
+              <img
+                src={announcement.image_url}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            </div>
+          </div>
+        );
+      }
+
+      const displayTitle = !announcement.title.trim() ? 'Announcement' : announcement.title;
 
       return (
         <div className="flex items-center gap-3 p-3 md:p-4">
@@ -281,26 +293,16 @@ export function HomeView({
 
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold text-primary-900 truncate">{displayTitle}</p>
-            {displayMessage && (
-              <p className="text-xs text-primary-700 truncate">{displayMessage}</p>
+            {announcement.message && (
+              <p className="text-xs text-primary-700 truncate">{announcement.message}</p>
             )}
           </div>
-
-          {isImage && announcement.image_url && (
-            <div className="flex-shrink-0">
-              <img
-                src={announcement.image_url}
-                alt=""
-                className="h-10 w-10 rounded-lg object-cover"
-              />
-            </div>
-          )}
         </div>
       );
     };
 
     const carousel = (
-      <div className="home-reveal relative overflow-hidden rounded-xl border shadow-sm" style={{ borderColor: theme.border, background: theme.surface }}>
+      <div className="home-reveal relative overflow-hidden rounded-[1.4rem] border shadow-md" style={{ borderColor: theme.border, background: theme.surface }}>
         <div
           className="flex transition-transform duration-300 ease-in-out"
           style={{ transform: `translateX(-${currentIndex * 100}%)` }}
@@ -362,9 +364,17 @@ export function HomeView({
 
   return (
     <div className="home-shell mx-auto max-w-5xl animate-fade-in px-4 pb-28 pt-5 md:pb-12 md:pt-24">
-      {textAnnouncements.length > 0 && textSlider}
+      {textAnnouncements.length > 0 && (
+        <div className="mb-4">
+          {textSlider}
+        </div>
+      )}
 
-      {imageAnnouncements.length > 0 && imageSlider}
+      {imageAnnouncements.length > 0 && (
+        <div className="mb-5">
+          {imageSlider}
+        </div>
+      )}
 
       {announcementError && (
         <div className="mb-4 rounded-[1.4rem] border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
@@ -372,7 +382,7 @@ export function HomeView({
         </div>
       )}
 
-      <div className="home-reveal liquid-panel mb-5 rounded-[1.8rem] p-3 md:p-4" style={{ borderColor: theme.border, background: theme.surface }}>
+      <div className="home-reveal liquid-panel mb-5 rounded-[1.4rem] p-4 md:p-5" style={{ borderColor: theme.border, background: theme.surface }}>
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: theme.primaryStrong }}>Welcome</p>
@@ -464,7 +474,7 @@ export function HomeView({
         {dashboardCards.map(({ title, value, detail, tint }, index) => (
           <div
             key={title}
-            className="home-reveal rounded-[1.35rem] p-4 shadow-md shadow-primary-900/10 ring-1 ring-white/40"
+            className="home-reveal rounded-[1.4rem] p-4 shadow-md shadow-primary-900/10 ring-1 ring-white/40"
             style={{ background: tint, animationDelay: `${140 + index * 70}ms` }}
           >
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-white/80">{title}</p>
@@ -498,8 +508,8 @@ export function HomeView({
         ))}
       </div>
 
-      <div className="mt-3 flex flex-col gap-3 md:mt-4">
-        <div className="liquid-panel rounded-[1.4rem] p-3 shadow-sm" style={{ border: `1px solid ${theme.border}`, background: theme.surface }}>
+      <div className="mt-5 flex flex-col gap-3 md:mt-7">
+        <div className="liquid-panel rounded-[1.4rem] p-4 md:p-5 shadow-sm" style={{ border: `1px solid ${theme.border}`, background: theme.surface }}>
           <div className="mb-2 flex items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: theme.primaryStrong }}>Appearance</p>

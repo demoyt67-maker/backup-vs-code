@@ -81,13 +81,13 @@ export async function getUstadProfileByEmail(email: string) {
 export async function createUstadProfile(payload: { email: string; full_name: string; age: number; photo_url: string | null }) {
   const { data, error } = await supabase
     .from('ustad_profiles')
-    .insert({
+    .upsert({
       email: payload.email,
       full_name: payload.full_name,
       age: payload.age,
       photo_url: payload.photo_url,
       status: 'pending',
-    })
+    }, { onConflict: 'email' })
     .select()
     .single();
 
@@ -139,6 +139,21 @@ export async function updateUstadProfileStatus(id: string, status: 'approved' | 
   return { data, error: null };
 }
 
+export async function cancelPendingUstadRequest(email: string) {
+  const { error } = await supabase
+    .from('ustad_profiles')
+    .delete()
+    .eq('email', email)
+    .eq('status', 'pending');
+
+  if (error) {
+    console.error('Cancel ustad request error:', error);
+    return { data: null, error };
+  }
+
+  return { data: true, error: null };
+}
+
 const USTAD_EMAIL_KEY = 'madrasa-ustad-email';
 
 export function getStoredUstadEmail(): string | null {
@@ -158,10 +173,90 @@ export function setStoredUstadEmail(email: string) {
   }
 }
 
-export function clearStoredUstadEmail() {
+export function clearStoredUstadEmail(): string | null {
+  if (typeof window === 'undefined') return null;
   try {
+    const email = localStorage.getItem(USTAD_EMAIL_KEY);
     localStorage.removeItem(USTAD_EMAIL_KEY);
+    return email;
   } catch {
-    // ignore
+    return null;
   }
+}
+
+export interface QuizQuestion {
+  id: string;
+  class_level: number;
+  level: number;
+  question: string;
+  options: string[];
+  correct_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getQuizQuestions(classLevel?: number, level?: number) {
+  let query = supabase
+    .from('quiz_questions')
+    .select('*')
+    .order('level', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (classLevel) query = query.eq('class_level', classLevel);
+  if (level) query = query.eq('level', level);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('Get quiz questions error:', error);
+    return { data: [] as QuizQuestion[], error };
+  }
+  return { data: (data ?? []) as QuizQuestion[], error: null };
+}
+
+export async function createQuizQuestion(payload: { class_level: number; level: number; question: string; options: string[]; correct_index: number }) {
+  const { data, error } = await supabase
+    .from('quiz_questions')
+    .insert({
+      class_level: payload.class_level,
+      level: payload.level,
+      question: payload.question,
+      options: payload.options,
+      correct_index: payload.correct_index,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Create quiz question error:', error);
+    return { data: null as QuizQuestion | null, error };
+  }
+  return { data: data as QuizQuestion, error: null };
+}
+
+export async function updateQuizQuestion(id: string, payload: { class_level?: number; level?: number; question?: string; options?: string[]; correct_index?: number }) {
+  const { data, error } = await supabase
+    .from('quiz_questions')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Update quiz question error:', error);
+    return { data: null as QuizQuestion | null, error };
+  }
+  return { data: data as QuizQuestion, error: null };
+}
+
+export async function deleteQuizQuestion(id: string) {
+  const { data, error } = await supabase
+    .from('quiz_questions')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Delete quiz question error:', error);
+    return { data: null, error };
+  }
+  return { data, error: null };
 }

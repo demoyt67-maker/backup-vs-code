@@ -95,7 +95,7 @@ export function UstadRequestsView({ onNavigate, theme }: Props) {
   };
 
   const pendingRequests = requests.filter((r) => r.status === 'pending');
-  const reviewedRequests = requests.filter((r) => r.status !== 'pending');
+  const reviewedRequests = requests.filter((r) => r.status === 'approved' || r.status === 'rejected');
 
   const formatDate = (value: string) => {
     const date = new Date(value);

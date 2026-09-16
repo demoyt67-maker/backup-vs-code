@@ -17,11 +17,13 @@ import { useLearningProgress } from '@/hooks/useLearningProgress';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeatureControl } from '@/hooks/useFeatureControl';
 import { useUstadAuth } from '@/hooks/useUstadAuth';
+import { clearStoredUstadEmail } from '@/lib/supabaseClient';
 import { UstadDashboard } from '@/views/UstadDashboard';
 import { UstadPendingScreen } from '@/views/UstadPendingScreen';
 import { UstadRegistrationForm } from '@/views/UstadRegistrationForm';
 import { UstadRejectedScreen } from '@/views/UstadRejectedScreen';
 import { UstadRequestsView } from '@/views/UstadRequestsView';
+import { UstadQuizManager } from '@/views/UstadQuizManager';
 import type { View } from '@/types';
 
 export type ClassLevel = 1 | 2 | 3;
@@ -353,6 +355,10 @@ function App() {
       if (!isSuperAdmin || !isSuperAdminMode) return;
     }
 
+    if (v === 'ustadQuiz') {
+      if (ustadStatus !== 'approved') return;
+    }
+
     if ((ustadStatus === 'pending' || ustadStatus === 'rejected') &&
         v !== 'ustadPending' &&
         v !== 'ustadRejected' &&
@@ -360,7 +366,7 @@ function App() {
       return;
     }
 
-    if (v !== 'home' && v !== 'settings' && v !== 'superAdmin' && v !== 'cms' && v !== 'ustadRequests' && !isEnabled(v as 'learning' | 'quiz' | 'writing' | 'harakat')) {
+    if (v !== 'home' && v !== 'settings' && v !== 'superAdmin' && v !== 'cms' && v !== 'ustadRequests' && v !== 'ustadQuiz' && !isEnabled(v as 'learning' | 'quiz' | 'writing' | 'harakat')) {
       return;
     }
     setView(v);
@@ -428,18 +434,19 @@ function App() {
     >
       <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} onLogout={logout} />
       <main className="md:pt-0">
-        {(view === 'ustadDashboard' || view === 'ustadPending' || view === 'ustadRegister' || view === 'ustadRejected') ? (
+        {(view === 'ustadDashboard' || view === 'ustadPending' || view === 'ustadRegister' || view === 'ustadRejected' || view === 'ustadQuiz') ? (
           <>
             {view === 'ustadDashboard' && (
               <UstadDashboard
                 theme={selectedTheme}
                 onBack={async () => { await logout(); setUstadLoginRequested(false); }}
+                onNavigate={navigate}
               />
             )}
             {view === 'ustadPending' && (
               <UstadPendingScreen
                 theme={selectedTheme}
-                onBack={async () => { await logout(); setUstadLoginRequested(false); }}
+                onBack={() => { setUstadLoginRequested(false); setView('home'); }}
               />
             )}
             {view === 'ustadRegister' && (
@@ -571,10 +578,16 @@ function App() {
             theme={selectedTheme}
           />
         )}
+        {view === 'ustadQuiz' && ustadStatus === 'approved' && (
+          <UstadQuizManager
+            onNavigate={navigate}
+            theme={selectedTheme}
+          />
+        )}
           </>
         )}
       </main>
-      {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && view !== 'ustadDashboard' && view !== 'ustadPending' && view !== 'ustadRegister' && view !== 'ustadRejected' && view !== 'ustadRequests' && (
+      {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && view !== 'ustadDashboard' && view !== 'ustadPending' && view !== 'ustadRegister' && view !== 'ustadRejected' && view !== 'ustadRequests' && view !== 'ustadQuiz' && (
         <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} onLogout={logout} />
       )}
     </div>

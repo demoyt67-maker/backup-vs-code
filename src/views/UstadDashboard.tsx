@@ -1,18 +1,20 @@
 import { useMemo } from 'react';
 import { BackHeader } from '@/components/BackHeader';
-import { GraduationCap, LogOut, Shield } from 'lucide-react';
+import { GraduationCap, LogOut, Shield, FileText } from 'lucide-react';
 import { CLASS_THEMES } from '@/theme';
 import { useUstadAuth } from '@/hooks/useUstadAuth';
 import { clearStoredUstadEmail } from '@/lib/supabaseClient';
+import type { View } from '@/types';
 
 type Theme = (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
 
 interface Props {
   theme: Theme;
   onBack: () => void | Promise<void>;
+  onNavigate: (v: View) => void;
 }
 
-export function UstadDashboard({ theme, onBack }: Props) {
+export function UstadDashboard({ theme, onBack, onNavigate }: Props) {
   const { profile } = useUstadAuth();
   const initials = useMemo(() => {
     const name = profile?.full_name || 'Ustad';
@@ -60,8 +62,16 @@ export function UstadDashboard({ theme, onBack }: Props) {
         </div>
 
         <button
+          onClick={() => onNavigate('ustadQuiz')}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-primary-200 bg-white px-6 py-3 text-sm font-bold text-primary-900 transition-all hover:bg-primary-50 active:scale-[0.98]"
+        >
+          <FileText size={18} />
+          Quiz Questions
+        </button>
+
+        <button
           onClick={handleLogout}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-primary-200 bg-white px-6 py-3 text-sm font-bold text-primary-900 transition-all hover:bg-primary-50 active:scale-[0.98]"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-primary-200 bg-white px-6 py-3 text-sm font-bold text-primary-900 transition-all hover:bg-primary-50 active:scale-[0.98]"
         >
           <LogOut size={18} />
           Log Out

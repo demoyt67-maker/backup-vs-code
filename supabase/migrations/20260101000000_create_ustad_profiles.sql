@@ -48,10 +48,14 @@ insert into storage.buckets (id, name, public)
 values ('ustad-photos', 'ustad-photos', false)
 on conflict (id) do nothing;
 
--- Allow anonymous uploads for registration
+-- Remove any existing ustad-photos INSERT policies to avoid conflicts
+drop policy if exists "Allow ustad photo upload" on storage.objects;
+drop policy if exists "Anyone can upload ustad photo" on storage.objects;
+
+-- Allow anonymous uploads to ustad-photos only
 create policy "Allow ustad photo upload"
   on storage.objects for insert
-  with check (bucket_id = 'ustad-photos' and auth.role() = 'anon');
+  with check (bucket_id = 'ustad-photos');
 
 -- Allow viewing photos
 create policy "Allow ustad photo view"

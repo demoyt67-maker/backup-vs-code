@@ -1,1 +1,1 @@
-export type View = 'home' | 'quiz' | 'learn' | 'writing' | 'score' | 'settings' | 'superAdmin' | 'cms' | 'featureControl' | 'announcementManagement';
+export type View = 'home' | 'quiz' | 'learn' | 'writing' | 'score' | 'settings' | 'superAdmin' | 'cms' | 'featureControl' | 'announcementManagement' | 'ustadDashboard' | 'ustadPending' | 'ustadRegister' | 'ustadRejected' | 'ustadRequests';

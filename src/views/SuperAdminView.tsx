@@ -21,6 +21,10 @@ export function SuperAdminView({ onNavigate, theme }: Props) {
     onNavigate('announcementManagement');
   };
 
+  const handleUstadRequests = () => {
+    onNavigate('ustadRequests');
+  };
+
   const cards = [
     {
       title: 'Feature Control',
@@ -35,6 +39,13 @@ export function SuperAdminView({ onNavigate, theme }: Props) {
       icon: '📢',
       status: 'Open',
       onClick: handleAnnouncementManagement,
+    },
+    {
+      title: 'Ustad Requests',
+      description: 'Review and approve or reject Ustad registration requests.',
+      icon: '👨‍🏫',
+      status: 'Open',
+      onClick: handleUstadRequests,
     },
     {
       title: 'User Management',

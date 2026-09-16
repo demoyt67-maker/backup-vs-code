@@ -3,7 +3,7 @@ import type { View } from '@/types';
 import { CLASS_THEMES } from '@/theme';
 import { ArrowLeft, Plus, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
-import { SET1_TITLE, SET1_LEVELS, SET3_TITLE, SET3_LEVELS, SET4_TITLE, SET4_LEVELS, SUKOON_SYMBOL, withSukoon, SET5_TITLE, SET5_LEVELS, SET6_TITLE, SET6_LEVELS, HARAKAT, TANWEEN, applyHaraka, applyTanween, type LetterLevel, type HarakaType } from '@/data/learningSets';
+import { SET1_TITLE, SET1_LEVELS, SET2_TITLE, SET2_LEVELS, SET3_TITLE, SET3_LEVELS, SET4_TITLE, SET4_LEVELS, SUKOON_SYMBOL, withSukoon, SET5_TITLE, SET5_LEVELS, SET6_TITLE, SET6_LEVELS, HARAKAT, TANWEEN, applyHaraka, applyTanween, type LetterLevel, type HarakaType } from '@/data/learningSets';
 import { ARABIC_LETTERS } from '@/data/letters';
 import { ARABIC_WORDS, type ArabicWord } from '@/data/arabicWords';
 

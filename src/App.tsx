@@ -16,6 +16,12 @@ import { useScoreStore } from '@/hooks/useScoreStore';
 import { useLearningProgress } from '@/hooks/useLearningProgress';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeatureControl } from '@/hooks/useFeatureControl';
+import { useUstadAuth } from '@/hooks/useUstadAuth';
+import { UstadDashboard } from '@/views/UstadDashboard';
+import { UstadPendingScreen } from '@/views/UstadPendingScreen';
+import { UstadRegistrationForm } from '@/views/UstadRegistrationForm';
+import { UstadRejectedScreen } from '@/views/UstadRejectedScreen';
+import { UstadRequestsView } from '@/views/UstadRequestsView';
 import type { View } from '@/types';
 
 export type ClassLevel = 1 | 2 | 3;
@@ -167,7 +173,7 @@ function ClassSelectionScreen({ onSelect, currentClass }: { onSelect: (level: Cl
   );
 }
 
-function LoginScreen({ onLogin }: { onLogin: () => void }) {
+function LoginScreen({ onLogin, onUstadLogin }: { onLogin: () => void; onUstadLogin: () => void }) {
   const theme = CLASS_THEMES[1];
 
   return (
@@ -213,6 +219,18 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
           </svg>
           Continue with Google
         </button>
+        <button
+          onClick={onUstadLogin}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-primary-200 bg-white px-6 py-3 text-sm font-bold text-primary-900 transition-all hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-lg active:scale-[0.98]"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <line x1="19" y1="8" x2="19" y2="14" />
+            <line x1="22" y1="11" x2="16" y2="11" />
+          </svg>
+          Log in as an Ustad
+        </button>
       </div>
     </div>
   );
@@ -242,8 +260,10 @@ function App() {
     }
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
+  const [ustadLoginRequested, setUstadLoginRequested] = useState(false);
 
   const { user, loading, initialized, login, logout, isSuperAdmin } = useAuth();
+  const { profile: ustadProfile, status: ustadStatus, loading: ustadLoading, refetch: refetchUstad } = useUstadAuth();
   const { isEnabled, features } = useFeatureControl();
 
   useEffect(() => {
@@ -285,11 +305,25 @@ function App() {
 
     if (user) {
       window.history.replaceState(null, '', '/');
-      setView('home');
     } else {
       window.history.replaceState(null, '', '/');
     }
   }, [initialized, loading, user]);
+
+  useEffect(() => {
+    if (ustadLoading) return;
+
+    if (ustadStatus === 'approved') {
+      setView('ustadDashboard');
+    } else if (ustadStatus === 'pending') {
+      setView('ustadPending');
+    } else if (ustadStatus === 'rejected') {
+      setView('ustadRejected');
+    } else if (ustadLoginRequested) {
+      setView('ustadRegister');
+      setUstadLoginRequested(false);
+    }
+  }, [ustadStatus, ustadLoading, ustadLoginRequested]);
 
   const currentClassOnSelection = selectedClass ?? loadSelectedClass();
   const effectiveAppearance = getEffectiveAppearance(appearanceMode, systemPrefersDark);
@@ -313,11 +347,24 @@ function App() {
   const navigate = useCallback((v: View) => {
     if (v === 'featureControl') {
       if (!isSuperAdmin || !isSuperAdminMode) return;
-    } else if (v !== 'home' && v !== 'settings' && v !== 'superAdmin' && v !== 'cms' && !isEnabled(v as 'learning' | 'quiz' | 'writing' | 'harakat')) {
+    }
+
+    if (v === 'ustadRequests') {
+      if (!isSuperAdmin || !isSuperAdminMode) return;
+    }
+
+    if ((ustadStatus === 'pending' || ustadStatus === 'rejected') &&
+        v !== 'ustadPending' &&
+        v !== 'ustadRejected' &&
+        v !== 'ustadDashboard') {
+      return;
+    }
+
+    if (v !== 'home' && v !== 'settings' && v !== 'superAdmin' && v !== 'cms' && v !== 'ustadRequests' && !isEnabled(v as 'learning' | 'quiz' | 'writing' | 'harakat')) {
       return;
     }
     setView(v);
-  }, [isEnabled, isSuperAdmin, isSuperAdminMode]);
+  }, [isEnabled, isSuperAdmin, isSuperAdminMode, ustadStatus]);
   const goHome = useCallback(() => setView('home'), []);
   const handleSelectClass = useCallback((level: ClassLevel) => {
     saveSelectedClass(level);
@@ -350,6 +397,8 @@ function App() {
       views.push('superAdmin');
       views.push('cms');
       views.push('featureControl');
+      views.push('announcementManagement');
+      views.push('ustadRequests');
     }
     return views;
   }, [isEnabled, isSuperAdmin, isSuperAdminMode]);
@@ -358,8 +407,14 @@ function App() {
     return <LoadingScreen />;
   }
 
-  if (!user) {
-    return <LoginScreen onLogin={login} />;
+  const isUstadFlow = ustadLoginRequested ||
+    view === 'ustadDashboard' ||
+    view === 'ustadPending' ||
+    view === 'ustadRegister' ||
+    view === 'ustadRejected';
+
+  if (!user && !isUstadFlow) {
+    return <LoginScreen onLogin={login} onUstadLogin={() => setUstadLoginRequested(true)} />;
   }
 
   return (
@@ -373,8 +428,39 @@ function App() {
     >
       <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} onLogout={logout} />
       <main className="md:pt-0">
-        {!selectedClass && <ClassSelectionScreen onSelect={handleSelectClass} currentClass={currentClassOnSelection} />}
-        {selectedClass && view === 'home' && (
+        {(view === 'ustadDashboard' || view === 'ustadPending' || view === 'ustadRegister' || view === 'ustadRejected') ? (
+          <>
+            {view === 'ustadDashboard' && (
+              <UstadDashboard
+                theme={selectedTheme}
+                onBack={async () => { await logout(); setUstadLoginRequested(false); }}
+              />
+            )}
+            {view === 'ustadPending' && (
+              <UstadPendingScreen
+                theme={selectedTheme}
+                onBack={async () => { await logout(); setUstadLoginRequested(false); }}
+              />
+            )}
+            {view === 'ustadRegister' && (
+              <UstadRegistrationForm
+                theme={selectedTheme}
+                onBack={async () => { await logout(); setUstadLoginRequested(false); }}
+                onSuccess={refetchUstad}
+              />
+            )}
+            {view === 'ustadRejected' && (
+              <UstadRejectedScreen
+                theme={selectedTheme}
+                profile={ustadProfile}
+                onBack={async () => { await logout(); setUstadLoginRequested(false); }}
+              />
+            )}
+          </>
+        ) : (
+          <>
+            {!selectedClass && <ClassSelectionScreen onSelect={handleSelectClass} currentClass={currentClassOnSelection} />}
+            {selectedClass && view === 'home' && (
           <HomeView
             onNavigate={navigate}
             score={data}
@@ -479,8 +565,16 @@ function App() {
             theme={selectedTheme}
           />
         )}
+        {selectedClass && view === 'ustadRequests' && isSuperAdmin && isSuperAdminMode && (
+          <UstadRequestsView
+            onNavigate={navigate}
+            theme={selectedTheme}
+          />
+        )}
+          </>
+        )}
       </main>
-      {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && (
+      {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && view !== 'ustadDashboard' && view !== 'ustadPending' && view !== 'ustadRegister' && view !== 'ustadRejected' && view !== 'ustadRequests' && (
         <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} onLogout={logout} />
       )}
     </div>

@@ -2,7 +2,7 @@ import { ChevronLeft } from 'lucide-react';
 
 interface Props {
   title: string;
-  onBack: () => void;
+  onBack: () => void | Promise<void>;
   subtitle?: string;
   theme?: {
     primary: string;

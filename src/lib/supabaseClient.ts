@@ -60,3 +60,108 @@ export async function signOut() {
 export function onAuthStateChange(callback: (event: string, session: any) => void) {
   return supabase.auth.onAuthStateChange(callback);
 }
+
+const USTAD_BUCKET = 'ustad-photos';
+
+export async function getUstadProfileByEmail(email: string) {
+  const { data, error } = await supabase
+    .from('ustad_profiles')
+    .select('*')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Get ustad profile error:', error);
+    return { data: null, error };
+  }
+
+  return { data, error: null };
+}
+
+export async function createUstadProfile(payload: { email: string; full_name: string; age: number; photo_url: string | null }) {
+  const { data, error } = await supabase
+    .from('ustad_profiles')
+    .insert({
+      email: payload.email,
+      full_name: payload.full_name,
+      age: payload.age,
+      photo_url: payload.photo_url,
+      status: 'pending',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Create ustad profile error:', error);
+    return { data: null, error };
+  }
+
+  return { data, error: null };
+}
+
+export async function uploadUstadPhoto(email: string, file: File): Promise<string> {
+  const safeEmail = email.replace(/[^a-zA-Z0-9]/g, '_');
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${safeEmail}-${Date.now()}.${fileExt}`;
+  const filePath = `ustad/${safeEmail}/${fileName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(USTAD_BUCKET)
+    .upload(filePath, file, { upsert: true, cacheControl: '3600' });
+
+  if (uploadError) {
+    console.error('Upload ustad photo error:', uploadError);
+    throw uploadError;
+  }
+
+  const { data } = supabase.storage.from(USTAD_BUCKET).getPublicUrl(filePath);
+  return data.publicUrl;
+}
+
+export async function updateUstadProfileStatus(id: string, status: 'approved' | 'rejected', rejectionReason?: string) {
+  const payload: Record<string, unknown> = { status };
+  if (status === 'rejected' && rejectionReason !== undefined) {
+    payload.rejection_reason = rejectionReason;
+  }
+
+  const { data, error } = await supabase
+    .from('ustad_profiles')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Update ustad profile status error:', error);
+    return { data: null, error };
+  }
+
+  return { data, error: null };
+}
+
+const USTAD_EMAIL_KEY = 'madrasa-ustad-email';
+
+export function getStoredUstadEmail(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem(USTAD_EMAIL_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredUstadEmail(email: string) {
+  try {
+    localStorage.setItem(USTAD_EMAIL_KEY, email);
+  } catch {
+    // ignore
+  }
+}
+
+export function clearStoredUstadEmail() {
+  try {
+    localStorage.removeItem(USTAD_EMAIL_KEY);
+  } catch {
+    // ignore
+  }
+}

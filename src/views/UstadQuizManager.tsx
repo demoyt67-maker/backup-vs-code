@@ -160,7 +160,7 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
 
   return (
     <div className="screen-shell mx-auto max-w-5xl px-4 pb-28 pt-6 md:pb-12 md:pt-24">
-      <BackHeader title="Quiz Questions" onBack={() => onNavigate('ustadDashboard')} theme={theme} />
+      <BackHeader title="Quiz Questions" onBack={() => onNavigate('ustadPanel')} theme={theme} />
 
       {error && (
         <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">

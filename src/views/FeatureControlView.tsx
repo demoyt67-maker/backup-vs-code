@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import type { View } from '@/types';
 import { CLASS_THEMES } from '@/theme';
+import { BackHeader } from '@/components/BackHeader';
+import { ArrowLeft } from 'lucide-react';
 
 type Theme = (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
 
@@ -84,6 +86,14 @@ export function FeatureControlView({ onNavigate, theme }: Props) {
   return (
     <div className="screen-shell mx-auto max-w-5xl animate-fade-in px-4 pb-28 pt-6 md:pb-12 md:pt-24">
       <div className="mb-8">
+        <button
+          onClick={() => onNavigate('superAdmin')}
+          className="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-700 transition-all hover:-translate-y-0.5 hover:shadow-md"
+          style={{ background: theme.accentSoft }}
+        >
+          <ArrowLeft size={16} />
+          Back to Control Center
+        </button>
         <h1 className="text-3xl font-black text-primary-900 md:text-4xl">Feature Control</h1>
         <p className="mt-2 text-sm text-primary-700">
           Manage feature availability across the app. Toggle features on or off for different classes and user roles.

@@ -59,7 +59,15 @@ export function TestingCenterView({ onNavigate, theme }: Props) {
 
   const handleSelectRole = (role: TestRole) => {
     setTestRole(role);
-    onNavigate('home');
+    if (role === 'ustad-pending') {
+      onNavigate('ustadPending');
+    } else if (role === 'ustad-rejected') {
+      onNavigate('ustadRejected');
+    } else if (role === 'super-admin') {
+      onNavigate('superAdmin');
+    } else {
+      onNavigate('home');
+    }
   };
   return (
     <div className="screen-shell mx-auto max-w-5xl px-4 pb-28 pt-6 md:pb-12 md:pt-24">
@@ -80,7 +88,7 @@ export function TestingCenterView({ onNavigate, theme }: Props) {
             You are previewing the app as a different role. This does not affect real accounts or data.
           </p>
           <button
-            onClick={clearTestRole}
+            onClick={() => { clearTestRole(); onNavigate('superAdmin'); }}
             className="mt-3 inline-flex items-center gap-2 rounded-xl bg-yellow-600 px-4 py-2 text-xs font-bold text-white transition-all hover:bg-yellow-700"
           >
             Exit Test Mode

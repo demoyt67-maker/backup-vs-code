@@ -1,6 +1,6 @@
 import { BackHeader } from '@/components/BackHeader';
 import { CLASS_THEMES } from '@/theme';
-import { FileText, BookOpen, Moon, BarChart3 } from 'lucide-react';
+import { FileText, BookOpen, Moon, BarChart3, GraduationCap, FileWarning, Bell, User } from 'lucide-react';
 import type { View } from '@/types';
 
 type Theme = (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
@@ -14,7 +14,10 @@ const SECTIONS = [
   { key: 'quiz', title: 'Quiz Questions', description: 'Manage quiz questions for classes.', icon: FileText, comingSoon: false },
   { key: 'learning', title: 'Learning Content', description: 'Manage Arabic learning content.', icon: BookOpen, comingSoon: true },
   { key: 'dailyIslamic', title: 'Daily Islamic Learning', description: 'Manage daily Islamic learning materials.', icon: Moon, comingSoon: true },
-  { key: 'reports', title: 'Reports', description: 'View reports and analytics.', icon: BarChart3, comingSoon: true },
+  { key: 'teaching', title: 'My Teaching Content', description: 'Organize your own teaching materials.', icon: GraduationCap, comingSoon: true },
+  { key: 'reports', title: 'Reports & Corrections', description: 'Review reports and correct mistakes.', icon: FileWarning, comingSoon: true },
+  { key: 'notifications', title: 'Notifications', description: 'Send and manage announcements.', icon: Bell, comingSoon: true },
+  { key: 'profile', title: 'My Ustad Profile', description: 'Update your profile and photo.', icon: User, comingSoon: true },
 ] as const;
 
 export function UstadPanelView({ theme, onNavigate }: Props) {
@@ -40,7 +43,7 @@ export function UstadPanelView({ theme, onNavigate }: Props) {
               <div className="p-5">
                 <div className="flex items-center gap-3">
                   <span
-                    className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl"
                     style={{ background: theme.accentSoft }}
                   >
                     <Icon size={24} />

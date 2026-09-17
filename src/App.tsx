@@ -277,6 +277,10 @@ function App() {
     setTestRole(role);
     setView('home');
   }, []);
+  const handleExitTestMode = useCallback(() => {
+    clearTestRole();
+    setView('superAdmin');
+  }, [clearTestRole]);
 
   useEffect(() => {
     if (isSuperAdmin && !isSuperAdminMode) {
@@ -370,11 +374,11 @@ function App() {
 
   const navigate = useCallback((v: View) => {
     if (v === 'featureControl') {
-      if (!effectiveIsSuperAdmin || !effectiveIsSuperAdminMode) return;
+      if (!isSuperAdmin || !isSuperAdminMode) return;
     }
 
     if (v === 'ustadRequests') {
-      if (!effectiveIsSuperAdmin || !effectiveIsSuperAdminMode) return;
+      if (!isSuperAdmin || !isSuperAdminMode) return;
     }
 
     if (v === 'ustadQuiz' || v === 'ustadPanel') {
@@ -393,7 +397,7 @@ function App() {
       return;
     }
     setView(v);
-  }, [isEnabled, effectiveIsSuperAdmin, effectiveIsSuperAdminMode, effectiveUstadStatus]);
+  }, [isEnabled, isSuperAdmin, isSuperAdminMode, effectiveUstadStatus]);
   const goHome = useCallback(() => setView('home'), []);
   const handleSelectClass = useCallback((level: ClassLevel) => {
     saveSelectedClass(level);
@@ -422,7 +426,7 @@ function App() {
     if (isEnabled('learning')) views.push('learn');
     if (isEnabled('quiz')) views.push('quiz');
     if (isEnabled('writing')) views.push('writing');
-    if (effectiveIsSuperAdmin && effectiveIsSuperAdminMode) {
+    if (isSuperAdmin && isSuperAdminMode) {
       views.push('superAdmin');
       views.push('cms');
       views.push('featureControl');
@@ -434,7 +438,13 @@ function App() {
       views.push('ustadPanel');
     }
     return views;
-  }, [isEnabled, effectiveIsSuperAdmin, effectiveIsSuperAdminMode, effectiveUstadStatus]);
+  }, [isEnabled, isSuperAdmin, isSuperAdminMode, effectiveUstadStatus]);
+
+  const contextValue = useMemo(() => ({
+    testRole: testRole as TestModeContextValue['testRole'],
+    setTestRole: (role: TestModeContextValue['testRole']) => setTestRole(role),
+    clearTestRole: () => setTestRole(null),
+  }), [testRole]);
 
   if (!initialized || loading) {
     return <LoadingScreen />;
@@ -450,12 +460,6 @@ function App() {
     return <LoginScreen onLogin={login} onUstadLogin={() => setUstadLoginRequested(true)} />;
   }
 
-  const contextValue = useMemo(() => ({
-    testRole: testRole as TestModeContextValue['testRole'],
-    setTestRole: (role: TestModeContextValue['testRole']) => setTestRole(role),
-    clearTestRole: () => setTestRole(null),
-  }), [testRole]);
-
   return (
     <TestModeContext.Provider value={contextValue}>
     <div
@@ -466,21 +470,22 @@ function App() {
         transition: 'background-color 500ms ease, color 500ms ease, border-color 500ms ease, box-shadow 500ms ease, background 500ms ease',
       }}
     >
-      <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={logout} />
+      <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onExitTestMode={handleExitTestMode} onLogout={logout} />
       <main className="md:pt-0">
         {(view === 'ustadDashboard' || view === 'ustadPending' || view === 'ustadRegister' || view === 'ustadRejected' || view === 'ustadQuiz' || view === 'ustadPanel') ? (
           <>
             {view === 'ustadDashboard' && (
               <UstadDashboard
                 theme={selectedTheme}
-                onBack={async () => { await logout(); setUstadLoginRequested(false); }}
+                onBack={() => setView('home')}
                 onNavigate={navigate}
+                onLogout={async () => { await logout(); setUstadLoginRequested(false); }}
               />
             )}
             {view === 'ustadPending' && (
               <UstadPendingScreen
                 theme={selectedTheme}
-                onBack={() => { setUstadLoginRequested(false); setView('home'); }}
+                onBack={async () => { await logout(); setUstadLoginRequested(false); }}
               />
             )}
             {view === 'ustadRegister' && (
@@ -497,13 +502,13 @@ function App() {
                 onBack={async () => { await logout(); setUstadLoginRequested(false); }}
               />
             )}
-            {view === 'ustadQuiz' && ustadStatus === 'approved' && (
+            {view === 'ustadQuiz' && effectiveUstadStatus === 'approved' && (
               <UstadQuizManager
                 onNavigate={navigate}
                 theme={selectedTheme}
               />
             )}
-            {view === 'ustadPanel' && ustadStatus === 'approved' && (
+            {view === 'ustadPanel' && effectiveUstadStatus === 'approved' && (
               <UstadPanelView
                 onNavigate={navigate}
                 theme={selectedTheme}
@@ -628,7 +633,7 @@ function App() {
         )}
       </main>
       {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && view !== 'ustadDashboard' && view !== 'ustadPending' && view !== 'ustadRegister' && view !== 'ustadRejected' && view !== 'ustadRequests' && view !== 'ustadQuiz' && view !== 'ustadPanel' && view !== 'testingCenter' && (
-        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={logout} />
+        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onExitTestMode={handleExitTestMode} onLogout={logout} />
       )}
     </div>
     </TestModeContext.Provider>

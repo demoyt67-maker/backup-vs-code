@@ -12,9 +12,10 @@ interface Props {
   theme: Theme;
   onBack: () => void | Promise<void>;
   onNavigate: (v: View) => void;
+  onLogout: () => void | Promise<void>;
 }
 
-export function UstadDashboard({ theme, onBack, onNavigate }: Props) {
+export function UstadDashboard({ theme, onBack, onNavigate, onLogout }: Props) {
   const { profile } = useUstadAuth();
   const initials = useMemo(() => {
     const name = profile?.full_name || 'Ustad';
@@ -28,7 +29,7 @@ export function UstadDashboard({ theme, onBack, onNavigate }: Props) {
 
   const handleLogout = async () => {
     clearStoredUstadEmail();
-    await onBack();
+    await onLogout();
   };
 
   return (

@@ -20,7 +20,7 @@ const SECTIONS = [
 export function UstadPanelView({ theme, onNavigate }: Props) {
   return (
     <div className="screen-shell mx-auto max-w-5xl px-4 pb-28 pt-6 md:pb-12 md:pt-24">
-      <BackHeader title="Ustad Panel" onBack={() => onNavigate('ustadDashboard')} theme={theme} />
+      <BackHeader title="Ustad Panel" onBack={() => onNavigate('home')} theme={theme} />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {SECTIONS.map((section, index) => {

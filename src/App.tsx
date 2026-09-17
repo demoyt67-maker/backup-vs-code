@@ -597,7 +597,7 @@ function App() {
             theme={selectedTheme}
           />
         )}
-        {selectedClass && view === 'testingCenter' && isSuperAdmin && isSuperAdminMode && (
+        {selectedClass && view === 'testingCenter' && effectiveIsSuperAdmin && effectiveIsSuperAdminMode && (
           <TestingCenterView
             onNavigate={navigate}
             theme={selectedTheme}

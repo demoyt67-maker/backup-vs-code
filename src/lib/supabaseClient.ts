@@ -187,23 +187,52 @@ export function clearStoredUstadEmail(): string | null {
 export interface QuizQuestion {
   id: string;
   class_level: number;
-  level: number;
-  question: string;
-  options: string[];
-  correct_index: number;
+  set_id: string;
+  question_text: string;
+  malayalam_text: string;
+  english_transliteration: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_option: 'A' | 'B' | 'C' | 'D';
+  created_by: string | null;
   created_at: string;
   updated_at: string;
+  is_deleted: boolean;
+  deleted_at: string | null;
+  deleted_by: string | null;
+  deletion_reason: string | null;
 }
 
-export async function getQuizQuestions(classLevel?: number, level?: number) {
+export type QuizQuestionCreate = Pick<
+  QuizQuestion,
+  | 'class_level'
+  | 'set_id'
+  | 'question_text'
+  | 'malayalam_text'
+  | 'english_transliteration'
+  | 'option_a'
+  | 'option_b'
+  | 'option_c'
+  | 'option_d'
+  | 'correct_option'
+> & {
+  created_by?: string;
+};
+
+export type QuizQuestionUpdate = Partial<QuizQuestionCreate>;
+
+export async function getQuizQuestions(classLevel?: number, setId?: string) {
   let query = supabase
     .from('quiz_questions')
     .select('*')
-    .order('level', { ascending: true })
+    .eq('is_deleted', false)
+    .order('set_id', { ascending: true })
     .order('created_at', { ascending: true });
 
   if (classLevel) query = query.eq('class_level', classLevel);
-  if (level) query = query.eq('level', level);
+  if (setId) query = query.eq('set_id', setId);
 
   const { data, error } = await query;
   if (error) {
@@ -213,16 +242,10 @@ export async function getQuizQuestions(classLevel?: number, level?: number) {
   return { data: (data ?? []) as QuizQuestion[], error: null };
 }
 
-export async function createQuizQuestion(payload: { class_level: number; level: number; question: string; options: string[]; correct_index: number }) {
+export async function createQuizQuestion(payload: QuizQuestionCreate) {
   const { data, error } = await supabase
     .from('quiz_questions')
-    .insert({
-      class_level: payload.class_level,
-      level: payload.level,
-      question: payload.question,
-      options: payload.options,
-      correct_index: payload.correct_index,
-    })
+    .insert(payload)
     .select()
     .single();
 
@@ -233,7 +256,7 @@ export async function createQuizQuestion(payload: { class_level: number; level: 
   return { data: data as QuizQuestion, error: null };
 }
 
-export async function updateQuizQuestion(id: string, payload: { class_level?: number; level?: number; question?: string; options?: string[]; correct_index?: number }) {
+export async function updateQuizQuestion(id: string, payload: QuizQuestionUpdate) {
   const { data, error } = await supabase
     .from('quiz_questions')
     .update(payload)
@@ -248,10 +271,18 @@ export async function updateQuizQuestion(id: string, payload: { class_level?: nu
   return { data: data as QuizQuestion, error: null };
 }
 
-export async function deleteQuizQuestion(id: string) {
+export async function deleteQuizQuestion(id: string, deletionReason: string, deletedBy?: string) {
+  const payload: Pick<QuizQuestion, 'is_deleted' | 'deleted_at' | 'deletion_reason'> & { deleted_by?: string } = {
+    is_deleted: true,
+    deleted_at: new Date().toISOString(),
+    deletion_reason: deletionReason,
+  };
+
+  if (deletedBy) payload.deleted_by = deletedBy;
+
   const { data, error } = await supabase
     .from('quiz_questions')
-    .delete()
+    .update(payload)
     .eq('id', id);
 
   if (error) {

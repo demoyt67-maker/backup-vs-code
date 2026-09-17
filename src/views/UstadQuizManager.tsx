@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Pencil, Trash2, Loader2, X, Check } from 'lucide-react';
 import { BackHeader } from '@/components/BackHeader';
 import { CLASS_THEMES } from '@/theme';
-import { supabase, getQuizQuestions, createQuizQuestion, updateQuizQuestion, deleteQuizQuestion, type QuizQuestion } from '@/lib/supabaseClient';
+import { getQuizQuestions, createQuizQuestion, updateQuizQuestion, deleteQuizQuestion, type QuizQuestion } from '@/lib/supabaseClient';
 import type { View } from '@/types';
 
 type Theme = (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
@@ -21,15 +21,17 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [classFilter, setClassFilter] = useState<ClassLevel | ''>('');
-  const [levelFilter, setLevelFilter] = useState<string>('');
+  const [setFilter, setSetFilter] = useState<string>('');
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formClass, setFormClass] = useState<ClassLevel>(1);
-  const [formLevel, setFormLevel] = useState<string>('1');
-  const [formQuestion, setFormQuestion] = useState('');
+  const [formSetId, setFormSetId] = useState<string>('1');
+  const [formQuestionText, setFormQuestionText] = useState('');
+  const [formMalayalamText, setFormMalayalamText] = useState('');
+  const [formEnglishTransliteration, setFormEnglishTransliteration] = useState('');
   const [formOptions, setFormOptions] = useState<string[]>(['', '', '', '']);
-  const [formCorrect, setFormCorrect] = useState<string>('0');
+  const [formCorrect, setFormCorrect] = useState<'A' | 'B' | 'C' | 'D'>('A');
   const [saving, setSaving] = useState(false);
 
   const [deleteReason, setDeleteReason] = useState('');
@@ -39,7 +41,7 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const { data, error } = await getQuizQuestions(classFilter || undefined, levelFilter ? Number(levelFilter) : undefined);
+      const { data, error } = await getQuizQuestions(classFilter || undefined, setFilter || undefined);
       if (error) throw error;
       setQuestions(data ?? []);
     } catch (err) {
@@ -51,43 +53,46 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
 
   useEffect(() => {
     void loadQuestions();
-  }, [classFilter, levelFilter]);
+  }, [classFilter, setFilter]);
 
   const openAdd = () => {
     setEditingId(null);
     setFormClass(classFilter === '' ? 1 : classFilter);
-    setFormLevel(levelFilter || '1');
-    setFormQuestion('');
+    setFormSetId(setFilter || '1');
+    setFormQuestionText('');
+    setFormMalayalamText('');
+    setFormEnglishTransliteration('');
     setFormOptions(['', '', '', '']);
-    setFormCorrect('0');
+    setFormCorrect('A');
     setShowForm(true);
   };
 
   const openEdit = (q: QuizQuestion) => {
     setEditingId(q.id);
     setFormClass(q.class_level as ClassLevel);
-    setFormLevel(String(q.level));
-    setFormQuestion(q.question);
-    setFormOptions(q.options.length === 4 ? q.options : [...q.options, ...Array(4 - q.options.length).fill('')]);
-    setFormCorrect(String(q.correct_index));
+    setFormSetId(q.set_id);
+    setFormQuestionText(q.question_text);
+    setFormMalayalamText(q.malayalam_text);
+    setFormEnglishTransliteration(q.english_transliteration);
+    setFormOptions([q.option_a, q.option_b, q.option_c, q.option_d]);
+    setFormCorrect(q.correct_option);
     setShowForm(true);
   };
 
   const handleSave = async () => {
-    if (!formQuestion.trim()) {
+    if (!formQuestionText.trim()) {
       setError('Question text is required');
       return;
     }
 
-    const options = formOptions.map((o) => o.trim()).filter((o) => o.length > 0);
-    if (options.length < 2) {
-      setError('At least 2 options are required');
+    if (!formSetId.trim() || !formMalayalamText.trim() || !formEnglishTransliteration.trim()) {
+      setError('Set, Malayalam text, and English transliteration are required');
       return;
     }
 
-    const correctIdx = Number(formCorrect);
-    if (!Number.isInteger(correctIdx) || correctIdx < 0 || correctIdx >= options.length) {
-      setError('Invalid correct answer index');
+    const options = formOptions.map((option) => option.trim());
+    if (options.some((option) => !option)) {
+      setError('All four options are required');
       return;
     }
 
@@ -96,10 +101,15 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
 
     const payload = {
       class_level: formClass,
-      level: Number(formLevel),
-      question: formQuestion.trim(),
-      options,
-      correct_index: correctIdx,
+      set_id: formSetId.trim(),
+      question_text: formQuestionText.trim(),
+      malayalam_text: formMalayalamText.trim(),
+      english_transliteration: formEnglishTransliteration.trim(),
+      option_a: options[0],
+      option_b: options[1],
+      option_c: options[2],
+      option_d: options[3],
+      correct_option: formCorrect,
     };
 
     try {
@@ -134,7 +144,7 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
 
     setSaving(true);
     setError(null);
-    const { error } = await deleteQuizQuestion(deletingId);
+    const { error } = await deleteQuizQuestion(deletingId, deleteReason.trim());
     if (error) {
       setError(error.message || 'Failed to delete question');
       setSaving(false);
@@ -173,12 +183,11 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-xs font-bold uppercase tracking-wider text-primary-700">Level</label>
+          <label className="text-xs font-bold uppercase tracking-wider text-primary-700">Set</label>
           <input
-            type="number"
-            min={1}
-            value={levelFilter}
-            onChange={(e) => setLevelFilter(e.target.value)}
+            type="text"
+            value={setFilter}
+            onChange={(e) => setSetFilter(e.target.value)}
             placeholder="All"
             className="w-20 rounded-xl border border-primary-200 bg-white px-3 py-2 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
           />
@@ -211,21 +220,21 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
                       Class {q.class_level}
                     </span>
                     <span className="rounded-full bg-primary-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-primary-600">
-                      Level {q.level}
+                      Set {q.set_id}
                     </span>
                   </div>
-                  <p className="mt-3 text-base font-bold text-primary-900">{q.question}</p>
+                  <p className="mt-3 text-base font-bold text-primary-900">{q.question_text}</p>
                   <div className="mt-2 grid grid-cols-2 gap-2">
-                    {q.options.map((opt, idx) => (
+                    {([q.option_a, q.option_b, q.option_c, q.option_d] as const).map((opt, idx) => (
                       <div
                         key={idx}
                         className={`rounded-xl border px-3 py-2 text-xs font-semibold ${
-                          idx === q.correct_index
+                          String.fromCharCode(65 + idx) === q.correct_option
                             ? 'border-green-500 bg-green-50 text-green-700'
                             : 'border-primary-100 bg-primary-50 text-primary-700'
                         }`}
                       >
-                        {idx === q.correct_index && <Check size={12} className="mr-1 inline" />}
+                        {String.fromCharCode(65 + idx) === q.correct_option && <Check size={12} className="mr-1 inline" />}
                         {opt}
                       </div>
                     ))}
@@ -278,12 +287,11 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-primary-800">Level</label>
+                  <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-primary-800">Set</label>
                   <input
-                    type="number"
-                    min={1}
-                    value={formLevel}
-                    onChange={(e) => setFormLevel(e.target.value)}
+                    type="text"
+                    value={formSetId}
+                    onChange={(e) => setFormSetId(e.target.value)}
                     className="w-full rounded-xl border border-primary-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                   />
                 </div>
@@ -292,11 +300,33 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
               <div>
                 <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-primary-800">Question</label>
                 <textarea
-                  value={formQuestion}
-                  onChange={(e) => setFormQuestion(e.target.value)}
+                  value={formQuestionText}
+                  onChange={(e) => setFormQuestionText(e.target.value)}
                   rows={2}
                   className="w-full rounded-xl border border-primary-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                   placeholder="Enter question text"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-primary-800">Malayalam Text</label>
+                <textarea
+                  value={formMalayalamText}
+                  onChange={(e) => setFormMalayalamText(e.target.value)}
+                  rows={2}
+                  className="w-full rounded-xl border border-primary-200 bg-white px-4 py-3 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                  placeholder="Enter Malayalam text"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-primary-800">English Transliteration</label>
+                <input
+                  type="text"
+                  value={formEnglishTransliteration}
+                  onChange={(e) => setFormEnglishTransliteration(e.target.value)}
+                  className="w-full rounded-xl border border-primary-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+                  placeholder="Enter English transliteration"
                 />
               </div>
 
@@ -329,11 +359,14 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
                   onChange={(e) => setFormCorrect(e.target.value)}
                   className="w-full rounded-xl border border-primary-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
                 >
-                  {formOptions.map((opt, idx) => (
+                  {formOptions.map((opt, idx) => {
+                    const optionKey = String.fromCharCode(65 + idx) as 'A' | 'B' | 'C' | 'D';
+                    return (
                     <option key={idx} value={idx} disabled={!opt.trim()}>
                       {opt.trim() ? `Option ${idx + 1}: ${opt}` : `Option ${idx + 1} (empty)`}
                     </option>
-                  ))}
+                    );
+                  })}
                 </select>
               </div>
 

@@ -46,11 +46,10 @@ interface Props {
   isSuperAdmin?: boolean;
   isApprovedUstad?: boolean;
   testRole?: string | null;
-  onExitTestMode?: () => void;
   onLogout?: () => void;
 }
 
-export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews, user, loading, isSuperAdmin, isApprovedUstad, testRole, onExitTestMode, onLogout }: Props) {
+export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews, user, loading, isSuperAdmin, isApprovedUstad, testRole, onLogout }: Props) {
   const adminItem: NavItem = { view: 'superAdmin', label: 'Admin', icon: Shield };
   const ustadItem: NavItem = { view: 'ustadPanel', label: 'Ustad', icon: LayoutDashboard };
   const items: NavItem[] = [
@@ -65,14 +64,13 @@ export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSup
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-white/80 px-2 py-2 backdrop-blur-xl md:hidden"
       style={{ borderColor: theme?.border ?? 'rgba(11,66,57,0.12)', boxShadow: '0 -10px 24px rgba(15, 58, 49, 0.08)' }}
     >
-      {testRole && onExitTestMode && (
-        <button
-          onClick={onExitTestMode}
+      {testRole && (
+        <div
           className="mx-auto mb-2 flex max-w-md items-center justify-center gap-2 rounded-full bg-yellow-100 px-3 py-1.5"
         >
           <Monitor size={14} className="text-yellow-700" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-800">Exit Test Mode</span>
-        </button>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-800">Test Mode</span>
+        </div>
       )}
       <div className="mx-auto flex max-w-md items-stretch justify-around gap-1 rounded-[1.4rem] border border-white/50 bg-white/70 p-1.5 shadow-inner">
         {filteredItems.map(({ view, label, icon: Icon }) => {
@@ -131,7 +129,7 @@ export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSup
 
 type TopNavProps = Props;
 
-export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews, user, loading, isSuperAdmin, isApprovedUstad, testRole, onExitTestMode, onLogout }: TopNavProps) {
+export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews, user, loading, isSuperAdmin, isApprovedUstad, testRole, onLogout }: TopNavProps) {
   const adminItem: NavItem = { view: 'superAdmin', label: 'Admin', icon: Shield };
   const ustadItem: NavItem = { view: 'ustadPanel', label: 'Ustad', icon: LayoutDashboard };
   const topItems: NavItem[] = [
@@ -146,14 +144,13 @@ export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperA
       style={{ borderColor: theme?.border ?? 'rgba(11,66,57,0.12)' }}
     >
     <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
-      {testRole && onExitTestMode && (
-        <button
-          onClick={onExitTestMode}
+      {testRole && (
+        <div
           className="absolute left-1/2 top-1 flex -translate-x-1/2 items-center gap-2 rounded-full bg-yellow-100 px-4 py-1.5"
         >
           <Monitor size={14} className="text-yellow-700" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-800">Exit Test Mode</span>
-        </button>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-800">Test Mode</span>
+        </div>
       )}
         <button
           onClick={() => onNavigate('home')}

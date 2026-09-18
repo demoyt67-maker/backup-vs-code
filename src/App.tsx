@@ -277,10 +277,6 @@ function App() {
     setTestRole(role);
     setView('home');
   }, []);
-  const handleExitTestMode = useCallback(() => {
-    clearTestRole();
-    setView('superAdmin');
-  }, [clearTestRole]);
 
   useEffect(() => {
     if (isSuperAdmin && !isSuperAdminMode) {
@@ -470,7 +466,7 @@ function App() {
         transition: 'background-color 500ms ease, color 500ms ease, border-color 500ms ease, box-shadow 500ms ease, background 500ms ease',
       }}
     >
-      <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onExitTestMode={handleExitTestMode} onLogout={logout} />
+      <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={logout} />
       <main className="md:pt-0">
         {(view === 'ustadDashboard' || view === 'ustadPending' || view === 'ustadRegister' || view === 'ustadRejected' || view === 'ustadQuiz' || view === 'ustadPanel') ? (
           <>
@@ -602,7 +598,7 @@ function App() {
             theme={selectedTheme}
           />
         )}
-        {selectedClass && view === 'testingCenter' && effectiveIsSuperAdmin && effectiveIsSuperAdminMode && (
+        {selectedClass && view === 'testingCenter' && isSuperAdmin && (
           <TestingCenterView
             onNavigate={navigate}
             theme={selectedTheme}
@@ -633,7 +629,7 @@ function App() {
         )}
       </main>
       {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && view !== 'ustadDashboard' && view !== 'ustadPending' && view !== 'ustadRegister' && view !== 'ustadRejected' && view !== 'ustadRequests' && view !== 'ustadQuiz' && view !== 'ustadPanel' && view !== 'testingCenter' && (
-        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onExitTestMode={handleExitTestMode} onLogout={logout} />
+        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={logout} />
       )}
     </div>
     </TestModeContext.Provider>

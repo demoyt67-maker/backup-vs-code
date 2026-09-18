@@ -221,7 +221,7 @@ export type QuizQuestionCreate = Pick<
   created_by?: string;
 };
 
-export type QuizQuestionUpdate = Partial<QuizQuestionCreate>;
+export type QuizQuestionUpdate = Partial<QuizQuestion>;
 
 export async function getQuizQuestions(classLevel?: number, setId?: string) {
   let query = supabase
@@ -257,18 +257,21 @@ export async function createQuizQuestion(payload: QuizQuestionCreate) {
 }
 
 export async function updateQuizQuestion(id: string, payload: QuizQuestionUpdate) {
+  console.log('[Quiz] updateQuizQuestion start id=', id, 'payload=', JSON.stringify(payload));
+
   const { data, error } = await supabase
     .from('quiz_questions')
     .update(payload)
-    .eq('id', id)
-    .select()
-    .single();
+    .eq('id', id);
+
+  console.log('[Quiz] updateQuizQuestion result data=', data);
+  console.log('[Quiz] updateQuizQuestion result error=', JSON.stringify(error, null, 2));
 
   if (error) {
     console.error('Update quiz question error:', error);
     return { data: null as QuizQuestion | null, error };
   }
-  return { data: data as QuizQuestion, error: null };
+  return { data: null, error: null };
 }
 
 export async function deleteQuizQuestion(id: string, deletionReason: string, deletedBy?: string) {

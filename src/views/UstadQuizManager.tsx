@@ -36,6 +36,7 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
 
   const [deleteReason, setDeleteReason] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [lastDeleted, setLastDeleted] = useState<QuizQuestion | null>(null);
 
   const loadQuestions = async () => {
     setLoading(true);
@@ -114,15 +115,20 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
 
     try {
       if (editingId) {
+        console.log('[Quiz] handleSave update start editingId=', editingId, 'payload=', JSON.stringify(payload));
         const { error } = await updateQuizQuestion(editingId, payload);
+        console.log('[Quiz] handleSave update result error=', JSON.stringify(error, null, 2));
         if (error) throw error;
       } else {
         const { error } = await createQuizQuestion(payload);
         if (error) throw error;
       }
       setShowForm(false);
+      console.log('[Quiz] handleSave loadQuestions start');
       await loadQuestions();
+      console.log('[Quiz] handleSave loadQuestions done');
     } catch (err) {
+      console.error('[Quiz] handleSave catch err=', err);
       setError(err instanceof Error ? err.message : 'Failed to save question');
     } finally {
       setSaving(false);
@@ -142,6 +148,7 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
       return;
     }
 
+    const question = questions.find((q) => q.id === deletingId) ?? null;
     setSaving(true);
     setError(null);
     const { error } = await deleteQuizQuestion(deletingId, deleteReason.trim());
@@ -150,8 +157,29 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
       setSaving(false);
       return;
     }
+    setLastDeleted(question);
     setDeletingId(null);
     setDeleteReason('');
+    await loadQuestions();
+    setSaving(false);
+  };
+
+  const handleUndoDelete = async () => {
+    if (!lastDeleted) return;
+    setSaving(true);
+    setError(null);
+    const { error } = await updateQuizQuestion(lastDeleted.id, {
+      is_deleted: false,
+      deleted_at: null,
+      deleted_by: null,
+      deletion_reason: null,
+    } satisfies Partial<QuizQuestion>);
+    if (error) {
+      setError(error.message || 'Failed to undo delete');
+      setSaving(false);
+      return;
+    }
+    setLastDeleted(null);
     await loadQuestions();
     setSaving(false);
   };
@@ -165,6 +193,19 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
       {error && (
         <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
           {error}
+        </div>
+      )}
+
+      {lastDeleted && (
+        <div className="mb-4 flex items-center justify-between rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3">
+          <span className="text-xs font-semibold text-yellow-900">Question deleted.</span>
+          <button
+            onClick={handleUndoDelete}
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-xl bg-yellow-600 px-3 py-1.5 text-xs font-bold text-white transition-all hover:bg-yellow-700 disabled:opacity-70"
+          >
+            {saving ? <Loader2 size={14} className="animate-spin" /> : 'Undo'}
+          </button>
         </div>
       )}
 
@@ -263,8 +304,8 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-[1.4rem] border border-primary-100 bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-20">
+          <div className="w-full max-w-lg max-h-[calc(100vh-6rem)] overflow-y-auto rounded-[1.4rem] border border-primary-100 bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-bold text-primary-900">{editingId ? 'Edit Question' : 'Add Question'}</h3>
               <button onClick={() => setShowForm(false)} className="rounded-full p-1 text-primary-600 hover:bg-primary-50">

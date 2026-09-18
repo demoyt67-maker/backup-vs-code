@@ -50,12 +50,14 @@ interface Props {
 }
 
 export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews, user, loading, isSuperAdmin, isApprovedUstad, testRole, onLogout }: Props) {
+  const effectiveIsSuperAdmin = testRole === 'super-admin' ? true : isSuperAdmin;
+  const effectiveIsSuperAdminMode = testRole === 'super-admin' ? true : isSuperAdminMode;
   const adminItem: NavItem = { view: 'superAdmin', label: 'Admin', icon: Shield };
   const ustadItem: NavItem = { view: 'ustadPanel', label: 'Ustad', icon: LayoutDashboard };
   const items: NavItem[] = [
-    ...(isSuperAdmin && isSuperAdminMode ? [adminItem] : []),
+    ...(effectiveIsSuperAdmin && effectiveIsSuperAdminMode ? [adminItem] : []),
     ...(isApprovedUstad ? [ustadItem] : []),
-  ].length > 0 ? [...baseItems, ...(isSuperAdmin && isSuperAdminMode ? [adminItem] : []), ...(isApprovedUstad ? [ustadItem] : [])] : baseItems;
+  ].length > 0 ? [...baseItems, ...(effectiveIsSuperAdmin && effectiveIsSuperAdminMode ? [adminItem] : []), ...(isApprovedUstad ? [ustadItem] : [])] : baseItems;
   const visibleItems: NavItem[] = selectedClass === 1 ? items : items.filter((item) => item.view !== 'writing');
   const filteredItems = enabledViews ? visibleItems.filter((item) => enabledViews.includes(item.view)) : visibleItems;
 
@@ -128,12 +130,14 @@ export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSup
 type TopNavProps = Props;
 
 export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews, user, loading, isSuperAdmin, isApprovedUstad, testRole, onLogout }: TopNavProps) {
+  const effectiveIsSuperAdmin = testRole === 'super-admin' ? true : isSuperAdmin;
+  const effectiveIsSuperAdminMode = testRole === 'super-admin' ? true : isSuperAdminMode;
   const adminItem: NavItem = { view: 'superAdmin', label: 'Admin', icon: Shield };
   const ustadItem: NavItem = { view: 'ustadPanel', label: 'Ustad', icon: LayoutDashboard };
   const topItems: NavItem[] = [
-    ...(isSuperAdmin && isSuperAdminMode ? [adminItem] : []),
+    ...(effectiveIsSuperAdmin && effectiveIsSuperAdminMode ? [adminItem] : []),
     ...(isApprovedUstad ? [ustadItem] : []),
-  ].length > 0 ? [...baseTopItems, ...(isSuperAdmin && isSuperAdminMode ? [adminItem] : []), ...(isApprovedUstad ? [ustadItem] : [])] : baseTopItems;
+  ].length > 0 ? [...baseTopItems, ...(effectiveIsSuperAdmin && effectiveIsSuperAdminMode ? [adminItem] : []), ...(isApprovedUstad ? [ustadItem] : [])] : baseTopItems;
   const filteredItems = enabledViews ? topItems.filter((item) => enabledViews.includes(item.view)) : topItems;
 
   return (

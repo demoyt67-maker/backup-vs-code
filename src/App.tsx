@@ -422,7 +422,7 @@ function App() {
     if (isEnabled('learning')) views.push('learn');
     if (isEnabled('quiz')) views.push('quiz');
     if (isEnabled('writing')) views.push('writing');
-    if (isSuperAdmin && isSuperAdminMode) {
+    if (effectiveIsSuperAdmin && effectiveIsSuperAdminMode) {
       views.push('superAdmin');
       views.push('cms');
       views.push('featureControl');
@@ -434,7 +434,7 @@ function App() {
       views.push('ustadPanel');
     }
     return views;
-  }, [isEnabled, isSuperAdmin, isSuperAdminMode, effectiveUstadStatus]);
+  }, [isEnabled, testRole, isSuperAdmin, isSuperAdminMode, effectiveUstadStatus]);
 
   const contextValue = useMemo(() => ({
     testRole: testRole as TestModeContextValue['testRole'],

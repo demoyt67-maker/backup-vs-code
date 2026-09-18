@@ -115,15 +115,22 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
 
     try {
       if (editingId) {
+        console.log('[QUIZ MANAGER] Edit start editingId=', editingId);
         const { error } = await updateQuizQuestion(editingId, payload);
+        console.log('[QUIZ MANAGER] Edit result error=', JSON.stringify(error, null, 2));
         if (error) throw error;
       } else {
+        console.log('[QUIZ MANAGER] Add start');
         const { error } = await createQuizQuestion(payload);
+        console.log('[QUIZ MANAGER] Add result error=', JSON.stringify(error, null, 2));
         if (error) throw error;
       }
       setShowForm(false);
+      console.log('[QUIZ MANAGER] loadQuestions start');
       await loadQuestions();
+      console.log('[QUIZ MANAGER] loadQuestions done');
     } catch (err) {
+      console.error('[QUIZ MANAGER] catch err=', err);
       setError(err instanceof Error ? err.message : 'Failed to save question');
     } finally {
       setSaving(false);
@@ -146,7 +153,9 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
     const question = questions.find((q) => q.id === deletingId) ?? null;
     setSaving(true);
     setError(null);
+    console.log('[QUIZ MANAGER] Delete start deletingId=', deletingId);
     const { error } = await deleteQuizQuestion(deletingId, deleteReason.trim());
+    console.log('[QUIZ MANAGER] Delete result error=', JSON.stringify(error, null, 2));
     if (error) {
       setError(error.message || 'Failed to delete question');
       setSaving(false);
@@ -155,29 +164,50 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
     setLastDeleted(question);
     setDeletingId(null);
     setDeleteReason('');
+    console.log('[QUIZ MANAGER] Delete loadQuestions start');
     await loadQuestions();
+    console.log('[QUIZ MANAGER] Delete loadQuestions done');
     setSaving(false);
   };
 
   const handleUndoDelete = async () => {
-    if (!lastDeleted) return;
-    setSaving(true);
-    setError(null);
+  if (!lastDeleted) return;
+
+  setSaving(true);
+  setError(null);
+
+  try {
     const { error } = await updateQuizQuestion(lastDeleted.id, {
       is_deleted: false,
       deleted_at: null,
       deleted_by: null,
       deletion_reason: null,
     } satisfies Partial<QuizQuestion>);
+
     if (error) {
-      setError(error.message || 'Failed to undo delete');
-      setSaving(false);
-      return;
+      throw error;
     }
+
     setLastDeleted(null);
     await loadQuestions();
+  } catch (error: any) {
+    console.error('[QUIZ UNDO] error:', error);
+    setError(error?.message || 'Failed to undo delete');
+  } finally {
     setSaving(false);
-  };
+  }
+};
+
+  if (!data) {
+    setError('Question could not be restored.');
+    setSaving(false);
+    return;
+  }
+
+  setLastDeleted(null);
+  await loadQuestions();
+  setSaving(false);
+};
 
   const filteredQuestions = questions;
 

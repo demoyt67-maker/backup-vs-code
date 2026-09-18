@@ -12,7 +12,7 @@ interface Props {
 
 const SECTIONS = [
   { key: 'quiz', title: 'Quiz Questions', description: 'Manage quiz questions for classes.', icon: FileText, comingSoon: false },
-  { key: 'learning', title: 'Learning Content', description: 'Manage Arabic learning content.', icon: BookOpen, comingSoon: true },
+  { key: 'learning', title: 'Learning Content', description: 'Browse Arabic learning content by class, set, and level.', icon: BookOpen, comingSoon: false },
   { key: 'dailyIslamic', title: 'Daily Islamic Learning', description: 'Manage daily Islamic learning materials.', icon: Moon, comingSoon: true },
   { key: 'teaching', title: 'My Teaching Content', description: 'Organize your own teaching materials.', icon: GraduationCap, comingSoon: true },
   { key: 'reports', title: 'Reports & Corrections', description: 'Review reports and correct mistakes.', icon: FileWarning, comingSoon: true },
@@ -29,10 +29,17 @@ export function UstadPanelView({ theme, onNavigate }: Props) {
         {SECTIONS.map((section, index) => {
           const Icon = section.icon;
           return (
-            <button
-              key={section.key}
-              onClick={() => !section.comingSoon && onNavigate('ustadQuiz')}
-              disabled={section.comingSoon}
+              <button
+                key={section.key}
+                onClick={() => {
+                  if (section.comingSoon) return;
+                  if (section.key === 'learning') {
+                    onNavigate('ustadLearning');
+                  } else {
+                    onNavigate('ustadQuiz');
+                  }
+                }}
+                disabled={section.comingSoon}
               className={`liquid-panel overflow-hidden rounded-[1.4rem] text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${section.comingSoon ? 'cursor-default opacity-80' : 'cursor-pointer'}`}
               style={{
                 border: `1px solid ${theme.border}`,

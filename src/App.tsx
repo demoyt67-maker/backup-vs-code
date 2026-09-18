@@ -25,6 +25,7 @@ import { UstadRejectedScreen } from '@/views/UstadRejectedScreen';
 import { UstadRequestsView } from '@/views/UstadRequestsView';
 import { UstadQuizManager } from '@/views/UstadQuizManager';
 import { UstadPanelView } from '@/views/UstadPanelView';
+import { UstadLearningContentView } from '@/views/UstadLearningContentView';
 import { TestingCenterView } from '@/views/TestingCenterView';
 import { TestModeContext, useTestMode, type TestRole, type TestModeContextValue } from '@/contexts/TestModeContext';
 import type { View } from '@/types';
@@ -432,6 +433,7 @@ function App() {
     }
     if (effectiveUstadStatus === 'approved') {
       views.push('ustadPanel');
+      views.push('ustadLearning');
     }
     return views;
   }, [isEnabled, testRole, isSuperAdmin, isSuperAdminMode, effectiveUstadStatus]);
@@ -506,6 +508,12 @@ function App() {
             )}
             {view === 'ustadPanel' && effectiveUstadStatus === 'approved' && (
               <UstadPanelView
+                onNavigate={navigate}
+                theme={selectedTheme}
+              />
+            )}
+            {view === 'ustadLearning' && effectiveUstadStatus === 'approved' && (
+              <UstadLearningContentView
                 onNavigate={navigate}
                 theme={selectedTheme}
               />

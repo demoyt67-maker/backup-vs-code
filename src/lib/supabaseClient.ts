@@ -257,35 +257,49 @@ export async function createQuizQuestion(payload: QuizQuestionCreate) {
 }
 
 export async function updateQuizQuestion(id: string, payload: QuizQuestionUpdate) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  console.log('[QUIZ UPDATE] session user id:', sessionData.session?.user?.id);
+  console.log('[QUIZ UPDATE] session user email:', sessionData.session?.user?.email);
+  console.log('[QUIZ UPDATE] session user role:', sessionData.session?.user?.role);
+  console.log('[QUIZ UPDATE] has access token:', Boolean(sessionData.session?.access_token));
+  console.log('[QUIZ UPDATE] id:', id);
+  console.log('[QUIZ UPDATE] payload:', JSON.stringify(payload));
+
   const { data, error } = await supabase
     .from('quiz_questions')
     .update(payload)
     .eq('id', id);
 
   if (error) {
+    console.error('[QUIZ UPDATE] code:', error?.code);
+    console.error('[QUIZ UPDATE] message:', error?.message);
+    console.error('[QUIZ UPDATE] details:', error?.details);
+    console.error('[QUIZ UPDATE] hint:', error?.hint);
+    console.error('[QUIZ UPDATE] full error:', error);
     console.error('Update quiz question error:', error);
     return { data: null as QuizQuestion | null, error };
   }
   return { data: null, error: null };
 }
 
-export async function deleteQuizQuestion(id: string, deletionReason: string, deletedBy?: string) {
-  const payload: Pick<QuizQuestion, 'is_deleted' | 'deleted_at' | 'deletion_reason'> & { deleted_by?: string } = {
-    is_deleted: true,
-    deleted_at: new Date().toISOString(),
-    deletion_reason: deletionReason,
-  };
-
-  if (deletedBy) payload.deleted_by = deletedBy;
-
-  const { data, error } = await supabase
-    .from('quiz_questions')
-    .update(payload)
-    .eq('id', id);
+export async function deleteQuizQuestion(
+  id: string,
+  deletionReason: string,
+  deletedBy?: string
+) {
+  const { data, error } = await supabase.rpc(
+    'soft_delete_quiz_question',
+    {
+      p_id: id,
+      p_reason: deletionReason,
+    }
+  );
 
   if (error) {
-    console.error('Delete quiz question error:', error);
+    console.error('[QUIZ DELETE] error:', error);
     return { data: null, error };
   }
+
   return { data, error: null };
 }
+

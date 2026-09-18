@@ -1,4 +1,4 @@
-import { Home, BookOpen, PenTool, BarChart3, Settings, Shield, LogOut, LayoutDashboard, Monitor } from 'lucide-react';
+import { Home, BookOpen, PenTool, BarChart3, Settings, Shield, LogOut, LayoutDashboard } from 'lucide-react';
 import type { View } from '@/types';
 import type { User } from '@supabase/supabase-js';
 import { useAuth } from '@/hooks/useAuth';
@@ -66,11 +66,9 @@ export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSup
     >
       {testRole && (
         <div
-          className="mx-auto mb-2 flex max-w-md items-center justify-center gap-2 rounded-full bg-yellow-100 px-3 py-1.5"
-        >
-          <Monitor size={14} className="text-yellow-700" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-800">Test Mode</span>
-        </div>
+          className="fixed top-3 right-3 z-50 h-3.5 w-3.5 rounded-full bg-yellow-400"
+          title="TEST"
+        />
       )}
       <div className="mx-auto flex max-w-md items-stretch justify-around gap-1 rounded-[1.4rem] border border-white/50 bg-white/70 p-1.5 shadow-inner">
         {filteredItems.map(({ view, label, icon: Icon }) => {
@@ -146,11 +144,9 @@ export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperA
     <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
       {testRole && (
         <div
-          className="absolute left-1/2 top-1 flex -translate-x-1/2 items-center gap-2 rounded-full bg-yellow-100 px-4 py-1.5"
-        >
-          <Monitor size={14} className="text-yellow-700" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-yellow-800">Test Mode</span>
-        </div>
+          className="fixed top-3 right-3 z-50 h-3.5 w-3.5 rounded-full bg-yellow-400"
+          title="TEST"
+        />
       )}
         <button
           onClick={() => onNavigate('home')}

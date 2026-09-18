@@ -257,15 +257,10 @@ export async function createQuizQuestion(payload: QuizQuestionCreate) {
 }
 
 export async function updateQuizQuestion(id: string, payload: QuizQuestionUpdate) {
-  console.log('[Quiz] updateQuizQuestion start id=', id, 'payload=', JSON.stringify(payload));
-
   const { data, error } = await supabase
     .from('quiz_questions')
     .update(payload)
     .eq('id', id);
-
-  console.log('[Quiz] updateQuizQuestion result data=', data);
-  console.log('[Quiz] updateQuizQuestion result error=', JSON.stringify(error, null, 2));
 
   if (error) {
     console.error('Update quiz question error:', error);

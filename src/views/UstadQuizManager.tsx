@@ -100,7 +100,7 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
     setSaving(true);
     setError(null);
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       class_level: formClass,
       set_id: formSetId.trim(),
       question_text: formQuestionText.trim(),
@@ -115,20 +115,15 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
 
     try {
       if (editingId) {
-        console.log('[Quiz] handleSave update start editingId=', editingId, 'payload=', JSON.stringify(payload));
         const { error } = await updateQuizQuestion(editingId, payload);
-        console.log('[Quiz] handleSave update result error=', JSON.stringify(error, null, 2));
         if (error) throw error;
       } else {
         const { error } = await createQuizQuestion(payload);
         if (error) throw error;
       }
       setShowForm(false);
-      console.log('[Quiz] handleSave loadQuestions start');
       await loadQuestions();
-      console.log('[Quiz] handleSave loadQuestions done');
     } catch (err) {
-      console.error('[Quiz] handleSave catch err=', err);
       setError(err instanceof Error ? err.message : 'Failed to save question');
     } finally {
       setSaving(false);
@@ -403,7 +398,7 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
                   {formOptions.map((opt, idx) => {
                     const optionKey = String.fromCharCode(65 + idx) as 'A' | 'B' | 'C' | 'D';
                     return (
-                    <option key={idx} value={idx} disabled={!opt.trim()}>
+                    <option key={idx} value={optionKey} disabled={!opt.trim()}>
                       {opt.trim() ? `Option ${idx + 1}: ${opt}` : `Option ${idx + 1} (empty)`}
                     </option>
                     );

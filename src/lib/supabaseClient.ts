@@ -148,10 +148,26 @@ export async function cancelPendingUstadRequest(email: string) {
 
   if (error) {
     console.error('Cancel ustad request error:', error);
-    return { data: null, error };
+    return { data: true, error };
   }
 
   return { data: true, error: null };
+}
+
+export async function restoreQuizQuestion(id: string) {
+  const { data, error } = await supabase.rpc(
+    'restore_quiz_question',
+    {
+      p_id: id,
+    }
+  );
+
+  if (error) {
+    console.error('[QUIZ UNDO] error:', error);
+    return { data: null, error };
+  }
+
+  return { data, error: null };
 }
 
 const USTAD_EMAIL_KEY = 'madrasa-ustad-email';

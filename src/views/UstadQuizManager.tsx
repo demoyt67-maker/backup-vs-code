@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Pencil, Trash2, Loader2, X, Check } from 'lucide-react';
 import { BackHeader } from '@/components/BackHeader';
 import { CLASS_THEMES } from '@/theme';
-import { getQuizQuestions, createQuizQuestion, updateQuizQuestion, deleteQuizQuestion, type QuizQuestion } from '@/lib/supabaseClient';
+import { getQuizQuestions, createQuizQuestion, updateQuizQuestion, deleteQuizQuestion, restoreQuizQuestion, type QuizQuestion } from '@/lib/supabaseClient';
 import type { View } from '@/types';
 
 type Theme = (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
@@ -170,44 +170,29 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
     setSaving(false);
   };
 
-  const handleUndoDelete = async () => {
-  if (!lastDeleted) return;
+ const handleUndoDelete = async () => {
+   if (!lastDeleted) return;
 
-  setSaving(true);
-  setError(null);
+   setSaving(true);
+   setError(null);
 
-  try {
-    const { error } = await updateQuizQuestion(lastDeleted.id, {
-      is_deleted: false,
-      deleted_at: null,
-      deleted_by: null,
-      deletion_reason: null,
-    } satisfies Partial<QuizQuestion>);
+   try {
+     const { error } = await restoreQuizQuestion(lastDeleted.id);
 
-    if (error) {
-      throw error;
-    }
+     if (error) {
+       throw error;
+     }
 
-    setLastDeleted(null);
-    await loadQuestions();
-  } catch (error: any) {
-    console.error('[QUIZ UNDO] error:', error);
-    setError(error?.message || 'Failed to undo delete');
-  } finally {
-    setSaving(false);
-  }
-};
+     setLastDeleted(null);
+     await loadQuestions();
+   } catch (error: any) {
+     console.error('[QUIZ UNDO] error:', error);
+     setError(error?.message || 'Failed to undo delete');
+   } finally {
+     setSaving(false);
+   }
+ };
 
-  if (!data) {
-    setError('Question could not be restored.');
-    setSaving(false);
-    return;
-  }
-
-  setLastDeleted(null);
-  await loadQuestions();
-  setSaving(false);
-};
 
   const filteredQuestions = questions;
 

@@ -92,7 +92,8 @@ const CONTENT: AdminSection[] = [
     title: 'Daily Islamic Learning',
     description: 'Manage daily Islamic learning materials and content.',
     icon: '🌙',
-    status: 'Coming Soon',
+    view: 'dailyIslamic',
+    status: 'Open',
   },
   {
     title: 'Home Management',

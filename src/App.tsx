@@ -26,6 +26,8 @@ import { UstadRequestsView } from '@/views/UstadRequestsView';
 import { UstadQuizManager } from '@/views/UstadQuizManager';
 import { UstadPanelView } from '@/views/UstadPanelView';
 import { UstadLearningContentView } from '@/views/UstadLearningContentView';
+import { UstadDailyIslamicLearningView } from '@/views/UstadDailyIslamicLearningView';
+import { SuperAdminDailyIslamicLearningView } from '@/views/SuperAdminDailyIslamicLearningView';
 import { TestingCenterView } from '@/views/TestingCenterView';
 import { TestModeContext, useTestMode, type TestRole, type TestModeContextValue } from '@/contexts/TestModeContext';
 import type { View } from '@/types';
@@ -378,7 +380,7 @@ function App() {
       if (!isSuperAdmin || !isSuperAdminMode) return;
     }
 
-    if (v === 'ustadQuiz' || v === 'ustadPanel') {
+    if (v === 'ustadQuiz' || v === 'ustadPanel' || v === 'ustadLearning' || v === 'ustadDailyIslamic') {
       if (effectiveUstadStatus !== 'approved') return;
     }
 
@@ -430,10 +432,12 @@ function App() {
       views.push('announcementManagement');
       views.push('ustadRequests');
       views.push('testingCenter');
+      views.push('dailyIslamic');
     }
     if (effectiveUstadStatus === 'approved') {
       views.push('ustadPanel');
       views.push('ustadLearning');
+      views.push('ustadDailyIslamic');
     }
     return views;
   }, [isEnabled, testRole, isSuperAdmin, isSuperAdminMode, effectiveUstadStatus]);
@@ -470,7 +474,7 @@ function App() {
     >
       <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={logout} />
       <main className="md:pt-0">
-        {(view === 'ustadDashboard' || view === 'ustadPending' || view === 'ustadRegister' || view === 'ustadRejected' || view === 'ustadQuiz' || view === 'ustadPanel') ? (
+         {(view === 'ustadDashboard' || view === 'ustadPending' || view === 'ustadRegister' || view === 'ustadRejected' || view === 'ustadQuiz' || view === 'ustadPanel' || view === 'ustadLearning' || view === 'ustadDailyIslamic') ? (
           <>
             {view === 'ustadDashboard' && (
               <UstadDashboard
@@ -518,6 +522,12 @@ function App() {
                 theme={selectedTheme}
               />
             )}
+            {view === 'ustadDailyIslamic' && effectiveUstadStatus === 'approved' && (
+              <UstadDailyIslamicLearningView
+                onNavigate={navigate}
+                theme={selectedTheme}
+              />
+            )}
           </>
         ) : (
           <>
@@ -535,7 +545,7 @@ function App() {
             onToggleSuperAdminMode={toggleSuperAdminMode}
           />
         )}
-        {selectedClass && selectedClass === 1 && view === 'quiz' && isEnabled('quiz') && (
+        {selectedClass && view === 'quiz' && isEnabled('quiz') && (
           <QuizView
             onHome={goHome}
             onFinish={recordQuizResult}
@@ -543,7 +553,7 @@ function App() {
             learned={learned}
           />
         )}
-        {selectedClass && selectedClass === 1 && view === 'quiz' && !isEnabled('quiz') && (
+        {selectedClass && view === 'quiz' && !isEnabled('quiz') && (
           <DisabledFeatureView onNavigate={navigate} theme={selectedTheme} featureName="Quiz" />
         )}
         {selectedClass && view === 'learn' && isEnabled('learning') && (
@@ -633,10 +643,16 @@ function App() {
             theme={selectedTheme}
           />
         )}
+        {selectedClass && view === 'dailyIslamic' && isSuperAdmin && isSuperAdminMode && (
+          <SuperAdminDailyIslamicLearningView
+            onNavigate={navigate}
+            theme={selectedTheme}
+          />
+        )}
           </>
         )}
       </main>
-      {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && view !== 'ustadDashboard' && view !== 'ustadPending' && view !== 'ustadRegister' && view !== 'ustadRejected' && view !== 'ustadRequests' && view !== 'ustadQuiz' && view !== 'ustadPanel' && view !== 'testingCenter' && (
+       {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && view !== 'ustadDashboard' && view !== 'ustadPending' && view !== 'ustadRegister' && view !== 'ustadRejected' && view !== 'ustadRequests' && view !== 'ustadQuiz' && view !== 'ustadPanel' && view !== 'ustadLearning' && view !== 'ustadDailyIslamic' && view !== 'dailyIslamic' && view !== 'testingCenter' && (
         <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={logout} />
       )}
     </div>

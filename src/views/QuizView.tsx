@@ -1,8 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
-import { Check, X, RotateCcw, Home, ArrowRight, Trophy } from 'lucide-react';
-import { ARABIC_LETTERS, TOTAL_LETTERS, type ArabicLetter } from '@/data/letters';
+import { useCallback, useMemo, useState, useEffect } from 'react';
+import { Check, X, RotateCcw, Home, ArrowRight, Trophy, Loader2 } from 'lucide-react';
 import { BackHeader } from '@/components/BackHeader';
-import { useCMSClass1Data } from '@/hooks/useCMSClass1Data';
+import { getQuizQuestions, getQuizSetIds, type QuizQuestion } from '@/lib/supabaseClient';
 
 interface Props {
   onHome: () => void;
@@ -20,37 +19,153 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function buildChoices(correct: ArabicLetter, pool: ArabicLetter[]): ArabicLetter[] {
-  const others = pool.filter((l) => l.arabic !== correct.arabic);
-  const distractors = shuffle(others).slice(0, 3);
-  return shuffle([correct, ...distractors]);
-}
-
-const QUESTION_LIMITS: Record<1 | 2 | 3, number> = {
-  1: TOTAL_LETTERS,
-  2: 16,
-  3: TOTAL_LETTERS,
-};
-
-export function QuizView({ onHome, onFinish, selectedClass }: Props) {
-  const cms = useCMSClass1Data();
-  const class1Letters = selectedClass === 1 && cms.usingCMS ? cms.letters : ARABIC_LETTERS;
-  const class1Limit = selectedClass === 1 && cms.usingCMS ? class1Letters.length : QUESTION_LIMITS[selectedClass];
-  const questionPool = useMemo(() => class1Letters.slice(0, class1Limit), [selectedClass, class1Letters, class1Limit]);
-  const questions = useMemo(() => shuffle(questionPool), [questionPool]);
+export function QuizView({ onHome, onFinish, selectedClass, learned }: Props) {
+  const [setId, setSetId] = useState<string>('');
+  const [availableSets, setAvailableSets] = useState<string[]>([]);
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [qIndex, setQIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [choices, setChoices] = useState<ArabicLetter[]>(() => buildChoices(questions[0], questionPool));
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
 
-  if (questions.length === 0) {
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setQuestions([]);
+    setQIndex(0);
+    setScore(0);
+    setAnswered(false);
+    setSelectedOption(null);
+    setFinished(false);
+
+    getQuizSetIds(selectedClass).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) {
+        setError('Failed to load quiz sets');
+        setLoading(false);
+        return;
+      }
+      setAvailableSets(data);
+      if (data.length > 0) {
+        setSetId(data[0]);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => { cancelled = true; };
+  }, [selectedClass]);
+
+  useEffect(() => {
+    if (!setId) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setQuestions([]);
+    setQIndex(0);
+    setScore(0);
+    setAnswered(false);
+    setSelectedOption(null);
+    setFinished(false);
+
+    getQuizQuestions(selectedClass, setId).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) {
+        setError('Failed to load quiz questions');
+        setLoading(false);
+        return;
+      }
+      setQuestions(data ?? []);
+      setLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [selectedClass, setId]);
+
+  const current = questions[qIndex];
+
+  const choices = useMemo(() => {
+    if (!current) return [];
+    const opts = [
+      { key: 'A', text: current.option_a },
+      { key: 'B', text: current.option_b },
+      { key: 'C', text: current.option_c },
+      { key: 'D', text: current.option_d },
+    ];
+    return shuffle(opts);
+  }, [current]);
+
+  const isCorrectPick = answered && selectedOption ? current?.correct_option === selectedOption : false;
+
+  const handleSelect = useCallback(
+    (optionKey: string) => {
+      if (answered || !current) return;
+      setSelectedOption(optionKey);
+      setAnswered(true);
+      if (optionKey === current.correct_option) {
+        setScore((s) => s + 1);
+      }
+    },
+    [answered, current]
+  );
+
+  const handleNext = useCallback(() => {
+    if (!answered) return;
+    if (qIndex + 1 >= questions.length) {
+      const finalScore = score;
+      setFinished(true);
+      onFinish(finalScore);
+      return;
+    }
+    setQIndex(qIndex + 1);
+    setAnswered(false);
+    setSelectedOption(null);
+  }, [answered, onFinish, qIndex, questions.length, score]);
+
+  const handleRetry = useCallback(() => {
+    setQIndex(0);
+    setScore(0);
+    setAnswered(false);
+    setSelectedOption(null);
+    setFinished(false);
+  }, []);
+
+  const handleSetChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSetId(e.target.value);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="screen-shell mx-auto max-w-2xl animate-fade-in px-4 pb-28 pt-6 md:pb-12 md:pt-24">
+        <BackHeader title="Arabic Quiz" onBack={onHome} />
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-primary-700" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="screen-shell mx-auto max-w-2xl animate-fade-in px-4 pb-28 pt-6 md:pb-12 md:pt-24">
+        <BackHeader title="Arabic Quiz" onBack={onHome} />
+        <div className="rounded-[1.4rem] border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+          {error}
+        </div>
+      </div>
+    );
+  }
+
+  if (availableSets.length === 0) {
     return (
       <div className="screen-shell mx-auto max-w-2xl animate-fade-in px-4 pb-28 pt-6 md:pb-12 md:pt-24">
         <BackHeader title="Arabic Quiz" onBack={onHome} />
         <div className="screen-panel liquid-panel relative z-10 rounded-[2rem] bg-[#fffdf8] p-8 text-center shadow-sm ring-1 ring-primary-100">
-          <p className="text-lg font-bold text-primary-900">No questions available right now.</p>
+          <p className="text-lg font-bold text-primary-900">No quiz questions available yet.</p>
           <p className="mt-2 text-sm text-primary-700">Please try again later or contact your teacher.</p>
           <button
             onClick={onHome}
@@ -63,47 +178,8 @@ export function QuizView({ onHome, onFinish, selectedClass }: Props) {
     );
   }
 
-  const current = questions[qIndex];
-  const isCorrectPick = selected === current.arabic;
-
-  const handleSelect = useCallback(
-    (letter: string) => {
-      if (answered) return;
-      setSelected(letter);
-      setAnswered(true);
-      if (letter === current.arabic) {
-        setScore((s) => s + 1);
-      }
-    },
-    [answered, current],
-  );
-
-  const handleNext = useCallback(() => {
-    if (!answered) return;
-    if (qIndex + 1 >= questions.length) {
-      const finalScore = score;
-      setFinished(true);
-      onFinish(finalScore);
-      return;
-    }
-    const next = qIndex + 1;
-    setQIndex(next);
-    setChoices(buildChoices(questions[next], questionPool));
-    setAnswered(false);
-    setSelected(null);
-  }, [answered, qIndex, questions, questionPool, score, onFinish]);
-
-  const handleRetry = useCallback(() => {
-    setQIndex(0);
-    setScore(0);
-    setAnswered(false);
-    setSelected(null);
-    setChoices(buildChoices(questions[0], questionPool));
-    setFinished(false);
-  }, [questionPool, questions]);
-
   if (finished) {
-    const pct = Math.round((score / questions.length) * 100);
+    const pct = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
     const message =
       pct >= 90
         ? 'MashaAllah! Excellent work!'
@@ -156,6 +232,21 @@ export function QuizView({ onHome, onFinish, selectedClass }: Props) {
     <div className="screen-shell mx-auto max-w-2xl animate-fade-in px-4 pb-28 pt-6 md:pb-12 md:pt-24">
       <BackHeader title="Arabic Quiz" onBack={onHome} subtitle={`Question ${qIndex + 1} of ${questions.length}`} />
 
+      <div className="mb-4">
+        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-primary-800">Set</label>
+        <select
+          value={setId}
+          onChange={handleSetChange}
+          className="w-full rounded-xl border border-primary-200 bg-white px-4 py-2.5 text-sm outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
+        >
+          {availableSets.map((s) => (
+            <option key={s} value={s}>
+              Set {s}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* progress bar */}
       <div className="mb-5 h-2 w-full overflow-hidden rounded-full bg-primary-100">
         <div
@@ -177,25 +268,21 @@ export function QuizView({ onHome, onFinish, selectedClass }: Props) {
       {/* question card */}
       <div className="screen-panel liquid-panel relative z-10 rounded-[2rem] bg-[#fffdf8] p-5 md:p-8">
         <p className="text-center text-xs font-semibold uppercase tracking-wide text-primary-700">
-          Identify this letter
+          Quiz Question
         </p>
 
         <div className="mt-4 rounded-[1.5rem] border border-primary-100/70 bg-gradient-to-br from-[#eef9f4] to-[#e7f7f2] p-5 text-center shadow-inner">
-          <p className="font-malayalam text-3xl font-bold text-primary-900">{current.malayalam}</p>
-          <p className="mt-1 text-lg font-semibold text-primary-600/80">{current.english}</p>
+          <p className="font-malayalam text-2xl font-bold text-primary-900">{current.malayalam_text}</p>
+          <p className="mt-1 text-base font-semibold text-primary-600/80">{current.english_transliteration}</p>
         </div>
-
-        <p className="mt-4 text-center font-malayalam text-sm font-medium text-primary-900">
-          ശരിയായ ഉത്തരം തിരഞ്ഞെടുക്കുക
-        </p>
 
         {/* 2x2 answer grid */}
         <div className="mt-5 grid grid-cols-2 gap-3">
           {choices.map((choice) => {
-            const isCorrect = choice.arabic === current.arabic;
-            const isPicked = choice.arabic === selected;
+            const isCorrect = choice.key === current.correct_option;
+            const isPicked = choice.key === selectedOption;
             let cls =
-                'bg-white ring-1 ring-primary-100 hover:-translate-y-0.5 hover:bg-primary-50 active:scale-95 text-primary-900 shadow-sm';
+              'bg-white ring-1 ring-primary-100 hover:-translate-y-0.5 hover:bg-primary-50 active:scale-95 text-primary-900 shadow-sm';
             if (answered) {
               if (isCorrect) cls = 'bg-green-50 ring-2 ring-green-500 text-green-700';
               else if (isPicked) cls = 'bg-red-50 ring-2 ring-red-400 text-red-600';
@@ -203,12 +290,12 @@ export function QuizView({ onHome, onFinish, selectedClass }: Props) {
             }
             return (
               <button
-                key={choice.arabic}
+                key={choice.key}
                 disabled={answered}
-                onClick={() => handleSelect(choice.arabic)}
-                className={`interactive-card relative flex aspect-[4/3] items-center justify-center rounded-2xl font-arabic text-5xl font-bold md:text-6xl ${cls}`}
+                onClick={() => handleSelect(choice.key)}
+                className={`interactive-card relative flex aspect-[4/3] items-center justify-center rounded-2xl text-base font-bold md:text-lg ${cls}`}
               >
-                {choice.arabic}
+                {choice.text}
                 {answered && isCorrect && (
                   <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white">
                     <Check size={14} strokeWidth={3} />
@@ -228,12 +315,10 @@ export function QuizView({ onHome, onFinish, selectedClass }: Props) {
         {answered && (
           <div
             className={`mt-4 rounded-2xl px-4 py-3 text-center text-sm font-bold ${
-              isCorrectPick
-                ? 'bg-green-50 text-green-700'
-                : 'bg-red-50 text-red-600'
+              isCorrectPick ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
             }`}
           >
-            {isCorrectPick ? 'Correct! Well done.' : `Not quite — the answer is ${current.arabic}`}
+            {isCorrectPick ? 'Correct! Well done.' : 'Not quite — the correct answer is highlighted above.'}
           </div>
         )}
 

@@ -81,19 +81,22 @@ export async function getUstadProfileByEmail(email: string) {
 export async function createUstadProfile(payload: { email: string; full_name: string; age: number; photo_url: string | null }) {
   const { data, error } = await supabase
     .from('ustad_profiles')
-    .upsert({
+    .insert({
       email: payload.email,
       full_name: payload.full_name,
       age: payload.age,
       photo_url: payload.photo_url,
       status: 'pending',
-    }, { onConflict: 'email' })
+    })
     .select()
     .single();
 
   if (error) {
     console.error('Create ustad profile error:', error);
-    return { data: null, error };
+    const message = error.message && /duplicate key|already exists|unique/i.test(error.message)
+      ? 'An account with this email already exists or is pending approval.'
+      : error.message;
+    return { data: null, error: { message } };
   }
 
   return { data, error: null };
@@ -258,6 +261,22 @@ export async function getQuizQuestions(classLevel?: number, setId?: string) {
   return { data: (data ?? []) as QuizQuestion[], error: null };
 }
 
+export async function getQuizSetIds(classLevel: number) {
+  const { data, error } = await supabase
+    .from('quiz_questions')
+    .select('set_id')
+    .eq('class_level', classLevel)
+    .eq('is_deleted', false);
+
+  if (error) {
+    console.error('Get quiz set ids error:', error);
+    return { data: [] as string[], error };
+  }
+
+  const unique = Array.from(new Set((data ?? []).map((r) => r.set_id)));
+  return { data: unique, error: null };
+}
+
 export async function createQuizQuestion(payload: QuizQuestionCreate) {
   const { data, error } = await supabase
     .from('quiz_questions')
@@ -317,5 +336,262 @@ export async function deleteQuizQuestion(
   }
 
   return { data, error: null };
+}
+
+export interface LearningContent {
+  id: string;
+  class_level: number;
+  set_id: string;
+  content_type: string;
+  title: string;
+  malayalam_content: string;
+  english_content: string;
+  arabic_content: string | null;
+  image_url: string | null;
+  audio_url: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  is_deleted: boolean;
+  deleted_at: string | null;
+  deleted_by: string | null;
+  deletion_reason: string | null;
+}
+
+export type LearningContentCreate = Pick<
+  LearningContent,
+  | 'class_level'
+  | 'set_id'
+  | 'content_type'
+  | 'title'
+  | 'malayalam_content'
+  | 'english_content'
+> & {
+  arabic_content?: string | null;
+  image_url?: string | null;
+  audio_url?: string | null;
+  created_by?: string;
+};
+
+export type LearningContentUpdate = Partial<LearningContent>;
+
+export const CONTENT_TYPE_OPTIONS = [
+  { value: 'lesson', label: 'Lesson' },
+  { value: 'explanation', label: 'Explanation' },
+  { value: 'example', label: 'Example' },
+  { value: 'practice', label: 'Practice' },
+  { value: 'note', label: 'Note' },
+] as const;
+
+export async function getLearningContents(classLevel?: number, setId?: string) {
+  let query = supabase
+    .from('ustad_learning_content')
+    .select('*')
+    .eq('is_deleted', false)
+    .order('class_level', { ascending: true })
+    .order('set_id', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (classLevel) query = query.eq('class_level', classLevel);
+  if (setId) query = query.eq('set_id', setId);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('Get learning contents error:', error);
+    return { data: [] as LearningContent[], error };
+  }
+  return { data: (data ?? []) as LearningContent[], error: null };
+}
+
+export async function createLearningContent(payload: LearningContentCreate) {
+  const { data, error } = await supabase
+    .from('ustad_learning_content')
+    .insert(payload)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Create learning content error:', error);
+    return { data: null as LearningContent | null, error };
+  }
+  return { data: data as LearningContent, error: null };
+}
+
+export async function updateLearningContent(id: string, payload: LearningContentUpdate) {
+  const { data, error } = await supabase
+    .from('ustad_learning_content')
+    .update(payload)
+    .eq('id', id);
+
+  if (error) {
+    console.error('Update learning content error:', error);
+    return { data: null as LearningContent | null, error };
+  }
+  return { data: null, error: null };
+}
+
+export async function deleteLearningContent(id: string, deletionReason: string) {
+  const { data, error } = await supabase.rpc(
+    'soft_delete_ustad_learning_content',
+    {
+      p_id: id,
+      p_reason: deletionReason,
+    }
+  );
+
+  if (error) {
+    console.error('[CONTENT DELETE] error:', error);
+    return { data: null, error };
+  }
+
+  return { data, error: null };
+}
+
+export async function restoreLearningContent(id: string) {
+  const { data, error } = await supabase.rpc(
+    'restore_ustad_learning_content',
+    {
+      p_id: id,
+    }
+  );
+
+  if (error) {
+    console.error('[CONTENT RESTORE] error:', error);
+    return { data: null, error };
+  }
+
+  return { data, error: null };
+}
+
+export interface DailyIslamicLearning {
+  id: string;
+  content_type: 'ayah' | 'dua' | 'good_message';
+  title: string;
+  arabic_content: string | null;
+  malayalam_content: string;
+  english_content: string;
+  scheduled_date: string;
+  status: 'pending' | 'approved' | 'rejected';
+  rejection_reason: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+}
+
+export type DailyIslamicLearningCreate = Pick<
+  DailyIslamicLearning,
+  'content_type' | 'title' | 'malayalam_content' | 'english_content' | 'scheduled_date'
+> & {
+  arabic_content?: string | null;
+  created_by?: string;
+};
+
+export type DailyIslamicLearningUpdate = Partial<DailyIslamicLearning>;
+
+export const DAILY_ISLAMIC_CONTENT_TYPES = [
+  { value: 'ayah', label: 'Ayah' },
+  { value: 'dua', label: 'Dua' },
+  { value: 'good_message', label: 'Good Message' },
+] as const;
+
+export async function getDailyIslamicLearning(status?: string) {
+  let query = supabase
+    .from('daily_islamic_learning')
+    .select('*')
+    .order('scheduled_date', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (status) query = query.eq('status', status);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('Get daily Islamic learning error:', error);
+    return { data: [] as DailyIslamicLearning[], error };
+  }
+  return { data: (data ?? []) as DailyIslamicLearning[], error: null };
+}
+
+export async function getMyDailyIslamicLearning(createdBy: string) {
+  const { data, error } = await supabase
+    .from('daily_islamic_learning')
+    .select('*')
+    .eq('created_by', createdBy)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Get my daily Islamic learning error:', error);
+    return { data: [] as DailyIslamicLearning[], error };
+  }
+  return { data: (data ?? []) as DailyIslamicLearning[], error: null };
+}
+
+export async function createDailyIslamicLearning(payload: DailyIslamicLearningCreate) {
+  const { data, error } = await supabase
+    .from('daily_islamic_learning')
+    .insert(payload)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Create daily Islamic learning error:', error);
+    return { data: null as DailyIslamicLearning | null, error };
+  }
+  return { data: data as DailyIslamicLearning, error: null };
+}
+
+export async function updateDailyIslamicLearning(id: string, payload: DailyIslamicLearningUpdate) {
+  const { data, error } = await supabase
+    .from('daily_islamic_learning')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Update daily Islamic learning error:', error);
+    return { data: null as DailyIslamicLearning | null, error };
+  }
+  return { data: data as DailyIslamicLearning, error: null };
+}
+
+export async function approveDailyIslamicLearning(id: string, reviewedBy: string) {
+  const { data, error } = await supabase
+    .from('daily_islamic_learning')
+    .update({
+      status: 'approved',
+      reviewed_by: reviewedBy,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Approve daily Islamic learning error:', error);
+    return { data: null as DailyIslamicLearning | null, error };
+  }
+  return { data: data as DailyIslamicLearning, error: null };
+}
+
+export async function rejectDailyIslamicLearning(id: string, reviewedBy: string, rejectionReason: string) {
+  const { data, error } = await supabase
+    .from('daily_islamic_learning')
+    .update({
+      status: 'rejected',
+      rejection_reason: rejectionReason,
+      reviewed_by: reviewedBy,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Reject daily Islamic learning error:', error);
+    return { data: null as DailyIslamicLearning | null, error };
+  }
+  return { data: data as DailyIslamicLearning, error: null };
 }
 

@@ -27,6 +27,7 @@ import { UstadQuizManager } from '@/views/UstadQuizManager';
 import { UstadPanelView } from '@/views/UstadPanelView';
 import { UstadLearningContentView } from '@/views/UstadLearningContentView';
 import { UstadDailyIslamicLearningView } from '@/views/UstadDailyIslamicLearningView';
+import { UstadMyTeachingContentView } from '@/views/UstadMyTeachingContentView';
 import { SuperAdminDailyIslamicLearningView } from '@/views/SuperAdminDailyIslamicLearningView';
 import { TestingCenterView } from '@/views/TestingCenterView';
 import { TestModeContext, useTestMode, type TestRole, type TestModeContextValue } from '@/contexts/TestModeContext';
@@ -380,7 +381,7 @@ function App() {
       if (!isSuperAdmin || !isSuperAdminMode) return;
     }
 
-    if (v === 'ustadQuiz' || v === 'ustadPanel' || v === 'ustadLearning' || v === 'ustadDailyIslamic') {
+    if (v === 'ustadQuiz' || v === 'ustadPanel' || v === 'ustadLearning' || v === 'ustadDailyIslamic' || v === 'ustadTeaching') {
       if (effectiveUstadStatus !== 'approved') return;
     }
 
@@ -438,6 +439,7 @@ function App() {
       views.push('ustadPanel');
       views.push('ustadLearning');
       views.push('ustadDailyIslamic');
+      views.push('ustadTeaching');
     }
     return views;
   }, [isEnabled, testRole, isSuperAdmin, isSuperAdminMode, effectiveUstadStatus]);
@@ -474,7 +476,7 @@ function App() {
     >
       <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={logout} />
       <main className="md:pt-0">
-         {(view === 'ustadDashboard' || view === 'ustadPending' || view === 'ustadRegister' || view === 'ustadRejected' || view === 'ustadQuiz' || view === 'ustadPanel' || view === 'ustadLearning' || view === 'ustadDailyIslamic') ? (
+         {(view === 'ustadDashboard' || view === 'ustadPending' || view === 'ustadRegister' || view === 'ustadRejected' || view === 'ustadQuiz' || view === 'ustadPanel' || view === 'ustadLearning' || view === 'ustadDailyIslamic' || view === 'ustadTeaching') ? (
           <>
             {view === 'ustadDashboard' && (
               <UstadDashboard
@@ -524,6 +526,12 @@ function App() {
             )}
             {view === 'ustadDailyIslamic' && effectiveUstadStatus === 'approved' && (
               <UstadDailyIslamicLearningView
+                onNavigate={navigate}
+                theme={selectedTheme}
+              />
+            )}
+            {view === 'ustadTeaching' && effectiveUstadStatus === 'approved' && (
+              <UstadMyTeachingContentView
                 onNavigate={navigate}
                 theme={selectedTheme}
               />
@@ -652,7 +660,7 @@ function App() {
           </>
         )}
       </main>
-       {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && view !== 'ustadDashboard' && view !== 'ustadPending' && view !== 'ustadRegister' && view !== 'ustadRejected' && view !== 'ustadRequests' && view !== 'ustadQuiz' && view !== 'ustadPanel' && view !== 'ustadLearning' && view !== 'ustadDailyIslamic' && view !== 'dailyIslamic' && view !== 'testingCenter' && (
+       {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && view !== 'ustadDashboard' && view !== 'ustadPending' && view !== 'ustadRegister' && view !== 'ustadRejected' && view !== 'ustadRequests' && view !== 'ustadQuiz' && view !== 'ustadPanel' && view !== 'ustadLearning' && view !== 'ustadDailyIslamic' && view !== 'ustadTeaching' && view !== 'dailyIslamic' && view !== 'testingCenter' && (
         <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={logout} />
       )}
     </div>

@@ -595,3 +595,128 @@ export async function rejectDailyIslamicLearning(id: string, reviewedBy: string,
   return { data: data as DailyIslamicLearning, error: null };
 }
 
+export interface TeachingContent {
+  id: string;
+  class_level: number;
+  set_id: string;
+  content_type: string;
+  title: string;
+  description: string | null;
+  content: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  status: 'draft' | 'published' | 'archived';
+  is_deleted: boolean;
+  deleted_at: string | null;
+  deleted_by: string | null;
+  deletion_reason: string | null;
+}
+
+export type TeachingContentCreate = Pick<
+  TeachingContent,
+  'class_level' | 'set_id' | 'content_type' | 'title' | 'content'
+> & {
+  description?: string | null;
+  status?: 'draft' | 'published' | 'archived';
+  created_by?: string;
+};
+
+export type TeachingContentUpdate = Partial<TeachingContent>;
+
+export const TEACHING_CONTENT_TYPE_OPTIONS = [
+  { value: 'lesson', label: 'Lesson' },
+  { value: 'explanation', label: 'Explanation' },
+  { value: 'example', label: 'Example' },
+  { value: 'practice', label: 'Practice' },
+  { value: 'note', label: 'Note' },
+] as const;
+
+export const TEACHING_CONTENT_STATUS_OPTIONS = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'published', label: 'Published' },
+  { value: 'archived', label: 'Archived' },
+] as const;
+
+export async function getTeachingContents(createdBy?: string, classLevel?: number, setId?: string, status?: string) {
+  let query = supabase
+    .from('ustad_teaching_content')
+    .select('*')
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false });
+
+  if (createdBy) query = query.eq('created_by', createdBy);
+  if (classLevel) query = query.eq('class_level', classLevel);
+  if (setId) query = query.eq('set_id', setId);
+  if (status) query = query.eq('status', status);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('Get teaching contents error:', error);
+    return { data: [] as TeachingContent[], error };
+  }
+  return { data: (data ?? []) as TeachingContent[], error: null };
+}
+
+export async function createTeachingContent(payload: TeachingContentCreate) {
+  const { data, error } = await supabase
+    .from('ustad_teaching_content')
+    .insert(payload)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Create teaching content error:', error);
+    return { data: null as TeachingContent | null, error };
+  }
+  return { data: data as TeachingContent, error: null };
+}
+
+export async function updateTeachingContent(id: string, payload: TeachingContentUpdate) {
+  const { data, error } = await supabase
+    .from('ustad_teaching_content')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Update teaching content error:', error);
+    return { data: null as TeachingContent | null, error };
+  }
+  return { data: data as TeachingContent, error: null };
+}
+
+export async function deleteTeachingContent(id: string, deletionReason: string) {
+  const { data, error } = await supabase.rpc(
+    'soft_delete_ustad_teaching_content',
+    {
+      p_id: id,
+      p_reason: deletionReason,
+    }
+  );
+
+  if (error) {
+    console.error('[TEACHING DELETE] error:', error);
+    return { data: null, error };
+  }
+
+  return { data, error: null };
+}
+
+export async function restoreTeachingContent(id: string) {
+  const { data, error } = await supabase.rpc(
+    'restore_ustad_teaching_content',
+    {
+      p_id: id,
+    }
+  );
+
+  if (error) {
+    console.error('[TEACHING RESTORE] error:', error);
+    return { data: null, error };
+  }
+
+  return { data, error: null };
+}
+

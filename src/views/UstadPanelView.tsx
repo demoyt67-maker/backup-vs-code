@@ -14,7 +14,7 @@ const SECTIONS = [
   { key: 'quiz', title: 'Quiz Questions', description: 'Manage quiz questions for classes.', icon: FileText, comingSoon: false },
   { key: 'learning', title: 'Learning Content', description: 'Browse Arabic learning content by class, set, and level.', icon: BookOpen, comingSoon: false },
   { key: 'dailyIslamic', title: 'Daily Islamic Learning', description: 'Submit ayah, dua, and good messages for daily learning.', icon: Moon, comingSoon: false },
-  { key: 'teaching', title: 'My Teaching Content', description: 'Organize your own teaching materials.', icon: GraduationCap, comingSoon: true },
+  { key: 'teaching', title: 'My Teaching Content', description: 'Organize your own teaching materials.', icon: GraduationCap, comingSoon: false },
   { key: 'reports', title: 'Reports & Corrections', description: 'Review reports and correct mistakes.', icon: FileWarning, comingSoon: true },
   { key: 'notifications', title: 'Notifications', description: 'Send and manage announcements.', icon: Bell, comingSoon: true },
   { key: 'profile', title: 'My Ustad Profile', description: 'Update your profile and photo.', icon: User, comingSoon: true },
@@ -37,6 +37,8 @@ export function UstadPanelView({ theme, onNavigate }: Props) {
                     onNavigate('ustadLearning');
                   } else if (section.key === 'dailyIslamic') {
                     onNavigate('ustadDailyIslamic');
+                  } else if (section.key === 'teaching') {
+                    onNavigate('ustadTeaching');
                   } else {
                     onNavigate('ustadQuiz');
                   }

@@ -92,6 +92,8 @@ const AVAILABLE_SETS_BY_CLASS: Record<1 | 2 | 3, SetId[]> = {
   3: [],
 };
 
+const availableSets = AVAILABLE_SETS_BY_CLASS[selectedClass];
+
 export function LearnView({
   onHome,
   selectedClass,

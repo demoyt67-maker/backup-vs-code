@@ -15,31 +15,62 @@ create table if not exists public.ustad_profiles (
 
 alter table public.ustad_profiles enable row level security;
 
--- Allow anonymous registration insert
+create or replace function public.current_user_is_super_admin()
+returns boolean as $$
+begin
+  return exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.role = 'super_admin'
+  );
+end;
+$$ language plpgsql security definer
+  set search_path = public;
+
+revoke execute on function public.current_user_is_super_admin() from public;
+revoke execute on function public.current_user_is_super_admin() from anon;
+grant execute on function public.current_user_is_super_admin() to authenticated;
+
+-- Allow anonymous registration insert, but only as pending
 create policy "Allow ustad registration insert"
   on public.ustad_profiles for insert
-  with check (auth.role() = 'anon');
+  with check (
+    auth.role() = 'anon'
+    and status = 'pending'
+  );
 
--- Allow viewing own profile by email for anonymous users
--- and full access for authenticated Super Admin users
+-- Allow viewing own profile or super admin access
 create policy "Allow ustad profile select"
   on public.ustad_profiles for select
   using (
-    auth.role() = 'anon'
+    public.current_user_is_super_admin()
     or
-    auth.role() = 'authenticated'
+    email = coalesce(
+      auth.jwt() ->> 'email',
+      current_setting('request.jwt.claims', true)::json ->> 'email',
+      ''
+    )
   );
 
 -- Only Super Admin can update ustad profiles
 create policy "Allow admin to update ustad profiles"
   on public.ustad_profiles for update
+  using (public.current_user_is_super_admin());
+
+-- Allow deleting pending profiles by owner or super admin
+create policy "Allow delete pending ustad profile"
+  on public.ustad_profiles for delete
   using (
-    auth.role() = 'authenticated'
-    and exists (
-      select 1
-      from public.profiles
-      where profiles.id = auth.uid()
-        and profiles.role = 'super_admin'
+    status = 'pending'
+    and (
+      public.current_user_is_super_admin()
+      or
+      email = coalesce(
+        auth.jwt() ->> 'email',
+        current_setting('request.jwt.claims', true)::json ->> 'email',
+        ''
+      )
     )
   );
 
@@ -52,10 +83,13 @@ on conflict (id) do nothing;
 drop policy if exists "Allow ustad photo upload" on storage.objects;
 drop policy if exists "Anyone can upload ustad photo" on storage.objects;
 
--- Allow anonymous uploads to ustad-photos only
+-- Allow anonymous uploads to ustad-photos only, scoped to the user's folder
 create policy "Allow ustad photo upload"
   on storage.objects for insert
-  with check (bucket_id = 'ustad-photos');
+  with check (
+    bucket_id = 'ustad-photos'
+    and (storage.foldername(name))[1] = 'ustad'
+  );
 
 -- Allow viewing photos
 create policy "Allow ustad photo view"

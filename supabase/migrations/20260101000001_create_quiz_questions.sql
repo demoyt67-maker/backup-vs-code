@@ -28,6 +28,23 @@ create index if not exists idx_quiz_questions_is_deleted on public.quiz_question
 
 alter table public.quiz_questions enable row level security;
 
+create or replace function public.current_user_is_super_admin()
+returns boolean as $$
+begin
+  return exists (
+    select 1
+    from public.profiles
+    where profiles.id = auth.uid()
+      and profiles.role = 'super_admin'
+  );
+end;
+$$ language plpgsql security definer
+  set search_path = public;
+
+revoke execute on function public.current_user_is_super_admin() from public;
+revoke execute on function public.current_user_is_super_admin() from anon;
+grant execute on function public.current_user_is_super_admin() to authenticated;
+
 -- Public read access for students
 create policy "Public can view quiz questions"
   on public.quiz_questions for select
@@ -36,47 +53,108 @@ create policy "Public can view quiz questions"
 -- Super Admin full access
 create policy "Super Admin can insert quiz questions"
   on public.quiz_questions for insert
-  with check (
-    exists (
-      select 1
-      from public.profiles
-      where profiles.id = auth.uid()
-        and profiles.role = 'super_admin'
-    )
-  );
+  with check (public.current_user_is_super_admin());
 
 create policy "Super Admin can update quiz questions"
   on public.quiz_questions for update
-  using (
-    exists (
-      select 1
-      from public.profiles
-      where profiles.id = auth.uid()
-        and profiles.role = 'super_admin'
-    )
-  );
+  using (public.current_user_is_super_admin());
 
 create policy "Super Admin can delete quiz questions"
   on public.quiz_questions for delete
-  using (
-    exists (
-      select 1
-      from public.profiles
-      where profiles.id = auth.uid()
-        and profiles.role = 'super_admin'
-    )
-  );
+  using (public.current_user_is_super_admin());
 
--- Ustad access: allow anon role to manage questions
--- Ustad access control is enforced at the application level
+-- Ustads can insert questions
 create policy "Ustads can insert quiz questions"
   on public.quiz_questions for insert
-  with check (auth.role() = 'anon' or auth.role() = 'authenticated');
+  with check (auth.uid() IS NOT NULL);
 
-create policy "Ustads can update quiz questions"
+-- Ustads can update their own questions
+create policy "Ustads can update own quiz questions"
   on public.quiz_questions for update
-  using (auth.role() = 'anon' or auth.role() = 'authenticated');
+  using (
+    created_by = coalesce(auth.jwt() ->> 'email', current_setting('request.jwt.claims', true)::json ->> 'email', '')
+  );
 
-create policy "Ustads can delete quiz questions"
+-- Ustads can delete their own questions
+create policy "Ustads can delete own quiz questions"
   on public.quiz_questions for delete
-  using (auth.role() = 'anon' or auth.role() = 'authenticated');
+  using (
+    created_by = coalesce(auth.jwt() ->> 'email', current_setting('request.jwt.claims', true)::json ->> 'email', '')
+  );
+
+-- Auto-update updated_at
+create or replace function public.handle_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = timezone('utc'::text, now());
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists handle_quiz_questions_updated_at on public.quiz_questions;
+create trigger handle_quiz_questions_updated_at
+  before update on public.quiz_questions
+  for each row execute function public.handle_updated_at();
+
+-- Soft delete RPC
+create or replace function public.soft_delete_quiz_question(
+  p_id uuid,
+  p_reason text
+)
+returns uuid as $$
+declare
+  v_deleted_by text;
+begin
+  select coalesce(
+    auth.jwt() ->> 'email',
+    current_setting('request.jwt.claims', true)::json ->> 'email',
+    ''
+  ) into v_deleted_by;
+
+  update public.quiz_questions
+  set
+    is_deleted = true,
+    deleted_at = timezone('utc'::text, now()),
+    deleted_by = v_deleted_by,
+    deletion_reason = p_reason
+  where id = p_id;
+
+  if not found then
+    raise exception 'Question not found';
+  end if;
+
+  return p_id;
+end;
+$$ language plpgsql security definer
+  set search_path = public;
+
+revoke execute on function public.soft_delete_quiz_question from public;
+revoke execute on function public.soft_delete_quiz_question from anon;
+grant execute on function public.soft_delete_quiz_question to authenticated;
+
+-- Restore RPC
+create or replace function public.restore_quiz_question(
+  p_id uuid
+)
+returns uuid as $$
+begin
+  update public.quiz_questions
+  set
+    is_deleted = false,
+    deleted_at = null,
+    deleted_by = null,
+    deletion_reason = null
+  where id = p_id;
+
+  if not found then
+    raise exception 'Question not found';
+  end if;
+
+  return p_id;
+end;
+$$ language plpgsql security definer
+  set search_path = public;
+
+revoke execute on function public.restore_quiz_question from public;
+revoke execute on function public.restore_quiz_question from anon;
+grant execute on function public.restore_quiz_question to authenticated;

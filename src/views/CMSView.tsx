@@ -317,6 +317,8 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [managingLessonId, setManagingLessonId] = useState<string | null>(null);
   const [managingLessonTitle, setManagingLessonTitle] = useState<string>('');
+  const [deleteTarget, setDeleteTarget] = useState<Lesson | null>(null);
+  const [saving, setSaving] = useState(false);
   const cancelledRef = useRef(false);
 
   useEffect(() => {
@@ -407,7 +409,7 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
     }
 
     const existingLesson = lessons.find((l) => l.id === lessonId);
-    const sortOrder = existingLesson ? lessons.indexOf(existingLesson) + 1 : lessons.length + 1;
+    const sortOrder = existingLesson ? Math.max(1, lessons.indexOf(existingLesson) + 1) : lessons.length + 1;
 
     const { data: savedLesson, error } = await supabase
       .from('cms_lessons')
@@ -455,6 +457,20 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
     }
 
     setSaveStatus({ type: 'success', message: 'Changes saved successfully!' });
+    await loadLessons();
+  }
+
+  async function handleDeleteLesson(lessonId: string) {
+    const { error } = await supabase
+      .from('cms_lessons')
+      .delete()
+      .eq('id', lessonId);
+
+    if (error) {
+      throw new Error(error.message || 'Failed to delete lesson');
+    }
+
+    setSaveStatus({ type: 'success', message: 'Lesson deleted successfully!' });
     await loadLessons();
   }
 
@@ -565,6 +581,7 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
                     Edit
                   </button>
                   <button
+                    onClick={() => setDeleteTarget(lesson)}
                     className="inline-flex items-center gap-1.5 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition-all hover:-translate-y-0.5 hover:shadow-sm"
                   >
                     <Trash2 size={14} />
@@ -573,6 +590,66 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="animate-fade-in">
+          <div className="mb-6">
+            <button
+              onClick={() => setDeleteTarget(null)}
+              className="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-700 transition-all hover:-translate-y-0.5 hover:shadow-md"
+              style={{ background: theme.accentSoft }}
+            >
+              <ArrowLeft size={16} />
+              Cancel
+            </button>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-2xl font-black text-primary-900 md:text-3xl">Delete Lesson</h2>
+              <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
+                This action cannot be undone.
+              </p>
+            </div>
+          </div>
+
+          <div className="liquid-panel overflow-hidden rounded-[1.4rem] border shadow-sm" style={{ border: `1px solid ${theme.border}`, background: theme.surface }}>
+            <div className="p-5">
+              <p className="text-sm font-semibold text-primary-900">
+                Are you sure you want to delete this lesson?
+              </p>
+              <div className="mt-3 rounded-xl border border-red-100 bg-red-50 p-3">
+                <p className="text-sm font-bold text-primary-900">{deleteTarget.title}</p>
+                <p className="text-xs text-primary-700">{deleteTarget.description}</p>
+              </div>
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={saving}
+                  className="rounded-2xl border px-5 py-2.5 text-sm font-bold text-primary-700 transition-all hover:-translate-y-0.5 hover:shadow-md disabled:opacity-50"
+                  style={{ borderColor: theme.border, background: theme.surfaceStrong }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    setSaving(true);
+                    try {
+                      await handleDeleteLesson(deleteTarget.id);
+                      setDeleteTarget(null);
+                    } catch (err) {
+                      setSaveStatus({ type: 'error', message: err instanceof Error ? err.message : 'Failed to delete lesson' });
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                  disabled={saving}
+                  className="rounded-2xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-95 disabled:opacity-50"
+                >
+                  {saving ? 'Deleting...' : 'Delete Lesson'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -586,6 +663,8 @@ function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [managingWords, setManagingWords] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Lesson | null>(null);
+  const [saving, setSaving] = useState(false);
   const cancelledRef = useRef(false);
 
   useEffect(() => {
@@ -644,7 +723,7 @@ function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
 
   async function handleSave(lessonId: string, title: string) {
     const existingLesson = lessons.find((l) => l.id === lessonId);
-    const sortOrder = existingLesson ? lessons.indexOf(existingLesson) + 1 : lessons.length + 1;
+    const sortOrder = existingLesson ? Math.max(1, lessons.indexOf(existingLesson) + 1) : lessons.length + 1;
 
     const { data: savedLesson, error } = await supabase
       .from('cms_lessons')
@@ -664,6 +743,20 @@ function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
     }
 
     setSaveStatus({ type: 'success', message: 'Changes saved successfully!' });
+    await loadLessons();
+  }
+
+  async function handleDeleteLesson(lessonId: string) {
+    const { error } = await supabase
+      .from('cms_lessons')
+      .delete()
+      .eq('id', lessonId);
+
+    if (error) {
+      throw new Error(error.message || 'Failed to delete lesson');
+    }
+
+    setSaveStatus({ type: 'success', message: 'Lesson deleted successfully!' });
     await loadLessons();
   }
 
@@ -762,6 +855,7 @@ function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
                         Edit
                       </button>
                       <button
+                        onClick={() => setDeleteTarget(lesson)}
                         className="inline-flex items-center gap-1.5 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition-all hover:-translate-y-0.5 hover:shadow-sm"
                       >
                         <Trash2 size={14} />
@@ -772,6 +866,66 @@ function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="animate-fade-in">
+          <div className="mb-6">
+            <button
+              onClick={() => setDeleteTarget(null)}
+              className="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-700 transition-all hover:-translate-y-0.5 hover:shadow-md"
+              style={{ background: theme.accentSoft }}
+            >
+              <ArrowLeft size={16} />
+              Cancel
+            </button>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-2xl font-black text-primary-900 md:text-3xl">Delete Lesson</h2>
+              <p className="text-xs font-semibold uppercase tracking-wider text-red-600">
+                This action cannot be undone.
+              </p>
+            </div>
+          </div>
+
+          <div className="liquid-panel overflow-hidden rounded-[1.4rem] border shadow-sm" style={{ border: `1px solid ${theme.border}`, background: theme.surface }}>
+            <div className="p-5">
+              <p className="text-sm font-semibold text-primary-900">
+                Are you sure you want to delete this lesson?
+              </p>
+              <div className="mt-3 rounded-xl border border-red-100 bg-red-50 p-3">
+                <p className="text-sm font-bold text-primary-900">{deleteTarget.title}</p>
+                <p className="text-xs text-primary-700">{deleteTarget.description}</p>
+              </div>
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={saving}
+                  className="rounded-2xl border px-5 py-2.5 text-sm font-bold text-primary-700 transition-all hover:-translate-y-0.5 hover:shadow-md disabled:opacity-50"
+                  style={{ borderColor: theme.border, background: theme.surfaceStrong }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    setSaving(true);
+                    try {
+                      await handleDeleteLesson(deleteTarget.id);
+                      setDeleteTarget(null);
+                    } catch (err) {
+                      setSaveStatus({ type: 'error', message: err instanceof Error ? err.message : 'Failed to delete lesson' });
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                  disabled={saving}
+                  className="rounded-2xl bg-red-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-95 disabled:opacity-50"
+                >
+                  {saving ? 'Deleting...' : 'Delete Lesson'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

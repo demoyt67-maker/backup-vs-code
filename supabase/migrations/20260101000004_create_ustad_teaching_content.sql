@@ -148,7 +148,12 @@ begin
 
   return p_id;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer
+  set search_path = public;
+
+revoke execute on function public.soft_delete_ustad_teaching_content from public;
+revoke execute on function public.soft_delete_ustad_teaching_content from anon;
+grant execute on function public.soft_delete_ustad_teaching_content to authenticated;
 
 -- Restore RPC
 create or replace function public.restore_ustad_teaching_content(
@@ -170,4 +175,9 @@ begin
 
   return p_id;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer
+  set search_path = public;
+
+revoke execute on function public.restore_ustad_teaching_content from public;
+revoke execute on function public.restore_ustad_teaching_content from anon;
+grant execute on function public.restore_ustad_teaching_content to authenticated;

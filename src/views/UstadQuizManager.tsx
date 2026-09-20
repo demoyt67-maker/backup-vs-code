@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Pencil, Trash2, Loader2, X, Check } from 'lucide-react';
 import { BackHeader } from '@/components/BackHeader';
 import { CLASS_THEMES } from '@/theme';
-import { getQuizQuestions, createQuizQuestion, updateQuizQuestion, deleteQuizQuestion, restoreQuizQuestion, type QuizQuestion } from '@/lib/supabaseClient';
+import { getQuizQuestions, createQuizQuestion, updateQuizQuestion, deleteQuizQuestion, restoreQuizQuestion, getStoredUstadEmail, type QuizQuestion } from '@/lib/supabaseClient';
 import type { View } from '@/types';
 
 type Theme = (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
@@ -111,6 +111,7 @@ export function UstadQuizManager({ onNavigate, theme }: Props) {
       option_c: options[2],
       option_d: options[3],
       correct_option: formCorrect,
+      created_by: getStoredUstadEmail() ?? undefined,
     };
 
     try {

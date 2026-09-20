@@ -109,7 +109,7 @@ export function useCMSClass1Data(): CMSClass1Data {
             .filter((l) => l.lesson_key?.startsWith('set1-level-'))
             .map((l, i) => ({
               level: i + 1,
-              letters: cached.letters,
+              letters: [] as ArabicLetter[],
             }));
 
           if (cachedLevels.length > 0 && cached.letters.length > 0) {

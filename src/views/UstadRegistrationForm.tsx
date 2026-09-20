@@ -45,6 +45,8 @@ export function UstadRegistrationForm({ theme, onBack, onSuccess }: Props) {
     e.preventDefault();
     setError(null);
 
+    if (submitting) return;
+
     if (!email.trim() || !email.includes('@')) {
       setError('Valid email is required');
       return;

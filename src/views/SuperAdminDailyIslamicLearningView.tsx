@@ -51,11 +51,13 @@ export function SuperAdminDailyIslamicLearningView({ onNavigate, theme }: Props)
   const handleApprove = async (id: string) => {
     setActionId(id);
     setError(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    const reviewerEmail = session?.user?.email ?? 'unknown';
     const { error } = await supabase
       .from('daily_islamic_learning')
       .update({
         status: 'approved',
-        reviewed_by: 'super_admin',
+        reviewed_by: reviewerEmail,
         reviewed_at: new Date().toISOString(),
       })
       .eq('id', id);
@@ -85,12 +87,14 @@ export function SuperAdminDailyIslamicLearningView({ onNavigate, theme }: Props)
 
     setActionId(rejectingId);
     setError(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    const reviewerEmail = session?.user?.email ?? 'unknown';
     const { error } = await supabase
       .from('daily_islamic_learning')
       .update({
         status: 'rejected',
         rejection_reason: rejectReason.trim(),
-        reviewed_by: 'super_admin',
+        reviewed_by: reviewerEmail,
         reviewed_at: new Date().toISOString(),
       })
       .eq('id', rejectingId);

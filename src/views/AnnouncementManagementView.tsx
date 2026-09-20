@@ -181,11 +181,13 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
       const trimmedTitle = title.trim();
       const trimmedMessage = message.trim();
 
+      const expiresAtUtc = neverExpires ? null : expiresAt ? new Date(expiresAt).toISOString() : null;
+
       if (editingId) {
         const updatePayload: Record<string, unknown> = {
           announcement_type: announcementType,
           updated_at: new Date().toISOString(),
-          expires_at: neverExpires ? null : expiresAt,
+          expires_at: expiresAtUtc,
         };
 
         if (announcementType === 'text') {
@@ -243,7 +245,7 @@ export function AnnouncementManagementView({ onNavigate, theme }: Props) {
           message: announcementType === 'text' ? trimmedMessage : '',
           image_url: announcementType === 'image' ? imageUrl : null,
           aspect_ratio: announcementType === 'image' ? aspectRatio : null,
-          expires_at: neverExpires ? null : expiresAt,
+          expires_at: expiresAtUtc,
         };
 
         console.log('[Announcement] DATABASE INSERT payload:', JSON.stringify(insertPayload));

@@ -10,24 +10,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-const originalFetch = window.fetch;
-window.fetch = async (input, init) => {
-  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-  const method = init?.method || 'GET';
-  console.log('[Supabase] Fetch start:', method, url);
-  const start = performance.now();
-  try {
-    const response = await originalFetch(input, init);
-    const duration = performance.now() - start;
-    console.log('[Supabase] Fetch complete:', response.status, response.statusText, `(${duration.toFixed(0)}ms)`);
-    return response;
-  } catch (error) {
-    const duration = performance.now() - start;
-    console.log('[Supabase] Fetch error:', error, `(${duration.toFixed(0)}ms)`);
-    throw error;
-  }
-};
-
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function signInWithGoogle() {
@@ -292,35 +274,23 @@ export async function createQuizQuestion(payload: QuizQuestionCreate) {
 }
 
 export async function updateQuizQuestion(id: string, payload: QuizQuestionUpdate) {
-  const { data: sessionData } = await supabase.auth.getSession();
-  console.log('[QUIZ UPDATE] session user id:', sessionData.session?.user?.id);
-  console.log('[QUIZ UPDATE] session user email:', sessionData.session?.user?.email);
-  console.log('[QUIZ UPDATE] session user role:', sessionData.session?.user?.role);
-  console.log('[QUIZ UPDATE] has access token:', Boolean(sessionData.session?.access_token));
-  console.log('[QUIZ UPDATE] id:', id);
-  console.log('[QUIZ UPDATE] payload:', JSON.stringify(payload));
-
   const { data, error } = await supabase
     .from('quiz_questions')
     .update(payload)
-    .eq('id', id);
+    .eq('id', id)
+    .select()
+    .single();
 
   if (error) {
-    console.error('[QUIZ UPDATE] code:', error?.code);
-    console.error('[QUIZ UPDATE] message:', error?.message);
-    console.error('[QUIZ UPDATE] details:', error?.details);
-    console.error('[QUIZ UPDATE] hint:', error?.hint);
-    console.error('[QUIZ UPDATE] full error:', error);
     console.error('Update quiz question error:', error);
     return { data: null as QuizQuestion | null, error };
   }
-  return { data: null, error: null };
+  return { data: data as QuizQuestion, error: null };
 }
 
 export async function deleteQuizQuestion(
   id: string,
-  deletionReason: string,
-  deletedBy?: string
+  deletionReason: string
 ) {
   const { data, error } = await supabase.rpc(
     'soft_delete_quiz_question',
@@ -421,13 +391,15 @@ export async function updateLearningContent(id: string, payload: LearningContent
   const { data, error } = await supabase
     .from('ustad_learning_content')
     .update(payload)
-    .eq('id', id);
+    .eq('id', id)
+    .select()
+    .single();
 
   if (error) {
     console.error('Update learning content error:', error);
     return { data: null as LearningContent | null, error };
   }
-  return { data: null, error: null };
+  return { data: data as LearningContent, error: null };
 }
 
 export async function deleteLearningContent(id: string, deletionReason: string) {

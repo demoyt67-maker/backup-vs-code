@@ -276,6 +276,11 @@ function App() {
   const { profile: ustadProfile, status: ustadStatus, loading: ustadLoading, refetch: refetchUstad } = useUstadAuth();
   const { isEnabled, features } = useFeatureControl();
 
+  const wrappedLogout = useCallback(async () => {
+    await logout();
+    clearStoredUstadEmail();
+  }, [logout]);
+
   const clearTestRole = useCallback(() => setTestRole(null), []);
   const handleTestRoleSelect = useCallback((role: TestRole) => {
     setTestRole(role);
@@ -286,6 +291,9 @@ function App() {
     if (isSuperAdmin && !isSuperAdminMode) {
       setIsSuperAdminMode(true);
       saveSuperAdminMode(true);
+    } else if (!isSuperAdmin && isSuperAdminMode) {
+      setIsSuperAdminMode(false);
+      saveSuperAdminMode(false);
     }
   }, [isSuperAdmin, isSuperAdminMode]);
 
@@ -328,18 +336,18 @@ function App() {
 
   useEffect(() => {
     if (ustadLoading) return;
-
-    if (ustadStatus === 'approved') {
+    const currentView = view;
+    if (ustadStatus === 'approved' && !['home', 'ustadDashboard', 'ustadPanel', 'ustadQuiz', 'ustadLearning', 'ustadDailyIslamic', 'ustadTeaching'].includes(currentView)) {
       setView('home');
-    } else if (ustadStatus === 'pending') {
+    } else if (ustadStatus === 'pending' && currentView !== 'ustadPending') {
       setView('ustadPending');
-    } else if (ustadStatus === 'rejected') {
+    } else if (ustadStatus === 'rejected' && currentView !== 'ustadRejected') {
       setView('ustadRejected');
-    } else if (ustadLoginRequested) {
+    } else if (ustadStatus === null && ustadLoginRequested && currentView !== 'ustadRegister') {
       setView('ustadRegister');
       setUstadLoginRequested(false);
     }
-  }, [ustadStatus, ustadLoading, ustadLoginRequested]);
+  }, [ustadStatus, ustadLoading, ustadLoginRequested, view]);
 
   const currentClassOnSelection = selectedClass ?? loadSelectedClass();
   const effectiveAppearance = getEffectiveAppearance(appearanceMode, systemPrefersDark);
@@ -373,31 +381,23 @@ function App() {
     : ustadStatus;
 
   const navigate = useCallback((v: View) => {
-    if (v === 'featureControl') {
-      if (!isSuperAdmin || !isSuperAdminMode) return;
-    }
+    const adminViews: View[] = ['superAdmin', 'cms', 'featureControl', 'announcementManagement', 'dailyIslamic', 'ustadRequests', 'testingCenter'];
+    if (adminViews.includes(v) && (!isSuperAdmin || !isSuperAdminMode)) return;
 
-    if (v === 'ustadRequests') {
-      if (!isSuperAdmin || !isSuperAdminMode) return;
-    }
-
-    if (v === 'ustadQuiz' || v === 'ustadPanel' || v === 'ustadLearning' || v === 'ustadDailyIslamic' || v === 'ustadTeaching') {
-      if (effectiveUstadStatus !== 'approved') return;
-    }
+    if (v === 'ustadPanel' && effectiveUstadStatus !== 'approved') return;
 
     if ((effectiveUstadStatus === 'pending' || effectiveUstadStatus === 'rejected') &&
         v !== 'ustadPending' &&
         v !== 'ustadRejected' &&
-        v !== 'ustadDashboard' &&
-        v !== 'testingCenter') {
+        v !== 'ustadDashboard') {
       return;
     }
 
-    if (v !== 'home' && v !== 'settings' && v !== 'superAdmin' && v !== 'cms' && v !== 'ustadRequests' && v !== 'ustadQuiz' && v !== 'ustadPanel' && v !== 'testingCenter' && !isEnabled(v as 'learning' | 'quiz' | 'writing' | 'harakat')) {
-      return;
-    }
+    const classRequiredViews: View[] = ['quiz', 'learn', 'writing', 'score'];
+    if (classRequiredViews.includes(v) && !selectedClass) return;
+
     setView(v);
-  }, [isEnabled, isSuperAdmin, isSuperAdminMode, effectiveUstadStatus]);
+  }, [isEnabled, isSuperAdmin, isSuperAdminMode, effectiveUstadStatus, selectedClass]);
   const goHome = useCallback(() => setView('home'), []);
   const handleSelectClass = useCallback((level: ClassLevel) => {
     saveSelectedClass(level);
@@ -474,28 +474,28 @@ function App() {
         transition: 'background-color 500ms ease, color 500ms ease, border-color 500ms ease, box-shadow 500ms ease, background 500ms ease',
       }}
     >
-      <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={logout} />
+      <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={wrappedLogout} />
       <main className="md:pt-0">
          {(view === 'ustadDashboard' || view === 'ustadPending' || view === 'ustadRegister' || view === 'ustadRejected' || view === 'ustadQuiz' || view === 'ustadPanel' || view === 'ustadLearning' || view === 'ustadDailyIslamic' || view === 'ustadTeaching') ? (
           <>
-            {view === 'ustadDashboard' && (
+            {view === 'ustadDashboard' && effectiveUstadStatus === 'approved' && (
               <UstadDashboard
                 theme={selectedTheme}
                 onBack={() => setView('home')}
                 onNavigate={navigate}
-                onLogout={async () => { await logout(); setUstadLoginRequested(false); }}
+                onLogout={async () => { await logout(); clearStoredUstadEmail(); setUstadLoginRequested(false); }}
               />
             )}
             {view === 'ustadPending' && (
               <UstadPendingScreen
                 theme={selectedTheme}
-                onBack={async () => { await logout(); setUstadLoginRequested(false); }}
+                onBack={() => setView('home')}
               />
             )}
             {view === 'ustadRegister' && (
               <UstadRegistrationForm
                 theme={selectedTheme}
-                onBack={async () => { await logout(); setUstadLoginRequested(false); }}
+                onBack={() => setView('home')}
                 onSuccess={refetchUstad}
               />
             )}
@@ -503,7 +503,7 @@ function App() {
               <UstadRejectedScreen
                 theme={selectedTheme}
                 profile={ustadProfile}
-                onBack={async () => { await logout(); setUstadLoginRequested(false); }}
+                onBack={() => setView('home')}
               />
             )}
             {view === 'ustadQuiz' && effectiveUstadStatus === 'approved' && (
@@ -624,7 +624,7 @@ function App() {
             theme={selectedTheme}
           />
         )}
-        {selectedClass && view === 'testingCenter' && isSuperAdmin && (
+        {selectedClass && view === 'testingCenter' && isSuperAdmin && isSuperAdminMode && (
           <TestingCenterView
             onNavigate={navigate}
             theme={selectedTheme}
@@ -661,7 +661,7 @@ function App() {
         )}
       </main>
        {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && view !== 'ustadDashboard' && view !== 'ustadPending' && view !== 'ustadRegister' && view !== 'ustadRejected' && view !== 'ustadRequests' && view !== 'ustadQuiz' && view !== 'ustadPanel' && view !== 'ustadLearning' && view !== 'ustadDailyIslamic' && view !== 'ustadTeaching' && view !== 'dailyIslamic' && view !== 'testingCenter' && (
-        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={logout} />
+        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={wrappedLogout} />
       )}
     </div>
     </TestModeContext.Provider>

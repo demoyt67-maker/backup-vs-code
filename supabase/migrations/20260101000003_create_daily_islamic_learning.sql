@@ -33,7 +33,8 @@ begin
       and profiles.role = 'super_admin'
   );
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer
+  set search_path = public;
 
 revoke execute on function public.current_user_is_super_admin() from public;
 revoke execute on function public.current_user_is_super_admin() from anon;
@@ -51,13 +52,15 @@ create policy "Super Admin can view all daily Islamic learning"
   on public.daily_islamic_learning for select
   using (public.current_user_is_super_admin());
 
+-- Super Admin can insert
+create policy "Super Admin can insert daily Islamic learning"
+  on public.daily_islamic_learning for insert
+  with check (public.current_user_is_super_admin());
+
 -- Ustads can insert their own submissions
 create policy "Ustads can insert daily Islamic learning"
   on public.daily_islamic_learning for insert
-  with check (
-    auth.role() = 'anon'
-    or auth.role() = 'authenticated'
-  );
+  with check (auth.uid() IS NOT NULL);
 
 -- Ustads can view their own submissions
 create policy "Ustads can view own daily Islamic learning"

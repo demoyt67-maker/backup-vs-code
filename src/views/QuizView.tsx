@@ -160,7 +160,7 @@ export function QuizView({ onHome, onFinish, selectedClass, learned }: Props) {
     );
   }
 
-  if (availableSets.length === 0) {
+  if (availableSets.length === 0 || questions.length === 0) {
     return (
       <div className="screen-shell mx-auto max-w-2xl animate-fade-in px-4 pb-28 pt-6 md:pb-12 md:pt-24">
         <BackHeader title="Arabic Quiz" onBack={onHome} />

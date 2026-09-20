@@ -32,6 +32,178 @@ interface Announcement {
   created_at: string;
 }
 
+interface CarouselProps {
+  items: Announcement[];
+  theme: (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
+}
+
+function Carousel({ items, theme }: CarouselProps) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+  const autoPlayTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const goTo = (index: number) => {
+    if (isTransitioning || items.length <= 1) return;
+    setIsTransitioning(true);
+    setCurrentIndex((index + items.length) % items.length);
+    if (autoPlayTimer.current) {
+      clearTimeout(autoPlayTimer.current);
+    }
+    autoPlayTimer.current = setTimeout(() => setIsTransitioning(false), 400);
+  };
+
+  const goNext = () => {
+    if (items.length <= 1) return;
+    goTo(currentIndex + 1);
+  };
+
+  const goPrev = () => {
+    if (items.length <= 1) return;
+    goTo(currentIndex - 1);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        goNext();
+      } else {
+        goPrev();
+      }
+    }
+    touchStartX.current = 0;
+    touchEndX.current = 0;
+  };
+
+  useEffect(() => {
+    if (items.length <= 1) return;
+    autoPlayTimer.current = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % items.length);
+    }, 5000);
+    return () => {
+      if (autoPlayTimer.current) {
+        clearInterval(autoPlayTimer.current);
+      }
+    };
+  }, [items.length]);
+
+  const resetAutoPlay = () => {
+    if (autoPlayTimer.current) {
+      clearInterval(autoPlayTimer.current);
+    }
+    if (items.length > 1) {
+      autoPlayTimer.current = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % items.length);
+      }, 5000);
+    }
+  };
+
+  const handleManualNav = (index: number) => {
+    goTo(index);
+    resetAutoPlay();
+  };
+
+  const renderItem = (announcement: Announcement) => {
+    if (announcement.announcement_type === 'image' && announcement.image_url) {
+      return (
+        <div className="w-full">
+          <div className="w-full overflow-hidden rounded-lg" style={{ aspectRatio: '5/1' }}>
+            <img
+              src={announcement.image_url}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    const displayTitle = !announcement.title.trim() ? 'Announcement' : announcement.title;
+
+    return (
+      <div className="flex items-center gap-3 p-3 md:p-4">
+        <div className="flex-shrink-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-700">
+            <Volume2 size={16} />
+          </div>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-bold text-primary-900 truncate">{displayTitle}</p>
+          {announcement.message && (
+            <p className="text-xs text-primary-700 truncate">{announcement.message}</p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="home-reveal relative overflow-hidden rounded-[1.4rem] border shadow-md" style={{ borderColor: theme.border, background: theme.surface }}>
+      <div
+        className="flex transition-transform duration-300 ease-in-out"
+        style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {items.map((announcement) => (
+          <div key={announcement.id} className="w-full flex-shrink-0">
+            {renderItem(announcement)}
+          </div>
+        ))}
+      </div>
+
+      {items.length > 1 && (
+        <>
+          <button
+            onClick={() => {
+              goPrev();
+              resetAutoPlay();
+            }}
+            className="absolute left-1.5 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-primary-700 shadow-md ring-1 ring-primary-100 transition-all hover:bg-white hover:scale-105 active:scale-95"
+            aria-label="Previous announcement"
+          >
+            ‹
+          </button>
+          <button
+            onClick={() => {
+              goNext();
+              resetAutoPlay();
+            }}
+            className="absolute right-1.5 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-primary-700 shadow-md ring-1 ring-primary-100 transition-all hover:bg-white hover:scale-105 active:scale-95"
+            aria-label="Next announcement"
+          >
+            ›
+          </button>
+          <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
+            {items.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleManualNav(idx)}
+                className={`h-1.5 rounded-full transition-all ${
+                  idx === currentIndex ? 'w-4 bg-primary-600' : 'w-1.5 bg-primary-300 hover:bg-primary-400'
+                }`}
+                aria-label={`Go to announcement ${idx + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 const CLASS_OPTIONS: { level: 1 | 2 | 3; title: string; subtitle: string; accent: string; badge: string }[] = [
   { level: 1, title: 'Class 1', subtitle: 'Beginner friendly • simple letters & tracing', accent: 'linear-gradient(135deg, #ffb8c9 0%, #ffd678 50%, #7adbc4 100%)', badge: 'bg-white/15' },
   { level: 2, title: 'Class 2', subtitle: 'Growing skills • letters, harakat, and practice', accent: 'linear-gradient(135deg, #90b5ff 0%, #5e77ef 48%, #ffc57a 100%)', badge: 'bg-white/15' },
@@ -193,186 +365,17 @@ export function HomeView({
   const textAnnouncements = announcements.filter((a) => a.announcement_type === 'text');
   const imageAnnouncements = announcements.filter((a) => a.announcement_type === 'image');
 
-  const makeCarousel = (items: Announcement[]) => {
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [isTransitioning, setIsTransitioning] = useState(false);
-    const touchStartX = useRef(0);
-    const touchEndX = useRef(0);
-    const autoPlayTimer = useRef<ReturnType<typeof setTimeout>>();
-
-    const goTo = (index: number) => {
-      if (isTransitioning || items.length <= 1) return;
-      setIsTransitioning(true);
-      setCurrentIndex((index + items.length) % items.length);
-      setTimeout(() => setIsTransitioning(false), 400);
-    };
-
-    const goNext = () => {
-      if (items.length <= 1) return;
-      goTo(currentIndex + 1);
-    };
-
-    const goPrev = () => {
-      if (items.length <= 1) return;
-      goTo(currentIndex - 1);
-    };
-
-    const handleTouchStart = (e: React.TouchEvent) => {
-      touchStartX.current = e.touches[0].clientX;
-    };
-
-    const handleTouchMove = (e: React.TouchEvent) => {
-      touchEndX.current = e.touches[0].clientX;
-    };
-
-    const handleTouchEnd = () => {
-      const diff = touchStartX.current - touchEndX.current;
-      if (Math.abs(diff) > 50) {
-        if (diff > 0) {
-          goNext();
-        } else {
-          goPrev();
-        }
-      }
-      touchStartX.current = 0;
-      touchEndX.current = 0;
-    };
-
-    useEffect(() => {
-      if (items.length <= 1) return;
-      autoPlayTimer.current = setInterval(() => {
-        setCurrentIndex((prev) => (prev + 1) % items.length);
-      }, 5000);
-      return () => {
-        if (autoPlayTimer.current) {
-          clearInterval(autoPlayTimer.current);
-        }
-      };
-    }, [items.length]);
-
-    const resetAutoPlay = () => {
-      if (autoPlayTimer.current) {
-        clearInterval(autoPlayTimer.current);
-      }
-      if (items.length > 1) {
-        autoPlayTimer.current = setInterval(() => {
-          setCurrentIndex((prev) => (prev + 1) % items.length);
-        }, 5000);
-      }
-    };
-
-    const handleManualNav = (index: number) => {
-      goTo(index);
-      resetAutoPlay();
-    };
-
-    const renderItem = (announcement: Announcement) => {
-      if (announcement.announcement_type === 'image' && announcement.image_url) {
-        return (
-          <div className="w-full">
-            <div className="w-full overflow-hidden rounded-lg" style={{ aspectRatio: '5/1' }}>
-              <img
-                src={announcement.image_url}
-                alt=""
-                className="h-full w-full object-cover"
-              />
-            </div>
-          </div>
-        );
-      }
-
-      const displayTitle = !announcement.title.trim() ? 'Announcement' : announcement.title;
-
-      return (
-        <div className="flex items-center gap-3 p-3 md:p-4">
-          <div className="flex-shrink-0">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-700">
-              <Volume2 size={16} />
-            </div>
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold text-primary-900 truncate">{displayTitle}</p>
-            {announcement.message && (
-              <p className="text-xs text-primary-700 truncate">{announcement.message}</p>
-            )}
-          </div>
-        </div>
-      );
-    };
-
-    const carousel = (
-      <div className="home-reveal relative overflow-hidden rounded-[1.4rem] border shadow-md" style={{ borderColor: theme.border, background: theme.surface }}>
-        <div
-          className="flex transition-transform duration-300 ease-in-out"
-          style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          {items.map((announcement) => (
-            <div key={announcement.id} className="w-full flex-shrink-0">
-              {renderItem(announcement)}
-            </div>
-          ))}
-        </div>
-
-        {items.length > 1 && (
-          <>
-            <button
-              onClick={() => {
-                goPrev();
-                resetAutoPlay();
-              }}
-              className="absolute left-1.5 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-primary-700 shadow-md ring-1 ring-primary-100 transition-all hover:bg-white hover:scale-105 active:scale-95"
-              aria-label="Previous announcement"
-            >
-              ‹
-            </button>
-            <button
-              onClick={() => {
-                goNext();
-                resetAutoPlay();
-              }}
-              className="absolute right-1.5 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-primary-700 shadow-md ring-1 ring-primary-100 transition-all hover:bg-white hover:scale-105 active:scale-95"
-              aria-label="Next announcement"
-            >
-              ›
-            </button>
-            <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 gap-1.5">
-              {items.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleManualNav(idx)}
-                  className={`h-1.5 rounded-full transition-all ${
-                    idx === currentIndex ? 'w-4 bg-primary-600' : 'w-1.5 bg-primary-300 hover:bg-primary-400'
-                  }`}
-                  aria-label={`Go to announcement ${idx + 1}`}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-    );
-
-    return carousel;
-  };
-
-  const textSlider = makeCarousel(textAnnouncements);
-  const imageSlider = makeCarousel(imageAnnouncements);
-
   return (
     <div className="home-shell mx-auto max-w-5xl animate-fade-in px-4 pb-28 pt-5 md:pb-12 md:pt-24">
       {textAnnouncements.length > 0 && (
         <div className="mb-4">
-          {textSlider}
+          <Carousel items={textAnnouncements} theme={theme} />
         </div>
       )}
 
       {imageAnnouncements.length > 0 && (
         <div className="mb-5">
-          {imageSlider}
+          <Carousel items={imageAnnouncements} theme={theme} />
         </div>
       )}
 

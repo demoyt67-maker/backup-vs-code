@@ -1,6 +1,6 @@
 import type { View } from '@/types';
 import { CLASS_THEMES } from '@/theme';
-import { LogOut } from 'lucide-react';
+import { LogOut, Bug } from 'lucide-react';
 
 type Theme = (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
 
@@ -121,6 +121,25 @@ export function SettingsView({ onNavigate, theme, isSuperAdmin, isSuperAdminMode
             )}
           </div>
         )}
+
+        <div className="liquid-panel rounded-[1.4rem] p-4 shadow-sm" style={{ border: `1px solid ${theme.border}`, background: theme.surface }}>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: theme.primaryStrong }}>Support</p>
+              <h3 className="mt-1 text-base font-bold" style={{ color: theme.text }}>Report a Problem</h3>
+            </div>
+            <Bug size={18} style={{ color: theme.primaryStrong }} />
+          </div>
+          <p className="text-xs text-primary-700 mb-3">
+            Found an issue with learning content, a bug in the app, or something else? Let us know.
+          </p>
+          <button
+            onClick={() => onNavigate('report')}
+            className="liquid-button interactive-card w-full rounded-[1rem] border border-primary-100 bg-white/90 px-4 py-3 text-left text-sm font-bold text-primary-700 transition-all hover:bg-primary-50 active:scale-[0.98]"
+          >
+            Report a Problem
+          </button>
+        </div>
       </div>
     </div>
   );

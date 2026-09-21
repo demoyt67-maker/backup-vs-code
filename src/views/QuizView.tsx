@@ -2,12 +2,14 @@ import { useCallback, useMemo, useState, useEffect } from 'react';
 import { Check, X, RotateCcw, Home, ArrowRight, Trophy, Loader2 } from 'lucide-react';
 import { BackHeader } from '@/components/BackHeader';
 import { getQuizQuestions, getQuizSetIds, type QuizQuestion } from '@/lib/supabaseClient';
+import { ARABIC_LETTERS } from '@/data/letters';
 
 interface Props {
   onHome: () => void;
   onFinish: (score: number) => void;
   selectedClass: 1 | 2 | 3;
   learned?: Set<number>;
+  isSuperAdminMode?: boolean;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -19,7 +21,44 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-export function QuizView({ onHome, onFinish, selectedClass, learned }: Props) {
+function generateLetterQuizQuestions(classLevel: number): QuizQuestion[] {
+  const letters = ARABIC_LETTERS;
+  const questions: QuizQuestion[] = [];
+
+  for (const letter of letters) {
+    const wrongOptions = ARABIC_LETTERS.filter((l) => l.index !== letter.index);
+    const shuffledWrong = shuffle(wrongOptions);
+    const options = shuffle([letter, ...shuffledWrong.slice(0, 3)]);
+
+    const correctIndex = options.findIndex((o) => o.index === letter.index);
+    const correctOption = ['A', 'B', 'C', 'D'][correctIndex] as 'A' | 'B' | 'C' | 'D';
+
+    questions.push({
+      id: `letter-quiz-${classLevel}-${letter.index}`,
+      class_level: classLevel,
+      set_id: 'letter-quiz',
+      question_text: 'What is this Arabic letter?',
+      malayalam_text: letter.malayalam,
+      english_transliteration: letter.english,
+      option_a: options[0].arabic,
+      option_b: options[1].arabic,
+      option_c: options[2].arabic,
+      option_d: options[3].arabic,
+      correct_option: correctOption,
+      created_by: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      is_deleted: false,
+      deleted_at: null,
+      deleted_by: null,
+      deletion_reason: null,
+    });
+  }
+
+  return questions;
+}
+
+export function QuizView({ onHome, onFinish, selectedClass, isSuperAdminMode }: Props) {
   const [setId, setSetId] = useState<string>('');
   const [availableSets, setAvailableSets] = useState<string[]>([]);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -30,6 +69,8 @@ export function QuizView({ onHome, onFinish, selectedClass, learned }: Props) {
   const [answered, setAnswered] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
+  const [adminCompleted, setAdminCompleted] = useState(false);
+  const [showNextSetConfirm, setShowNextSetConfirm] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +82,8 @@ export function QuizView({ onHome, onFinish, selectedClass, learned }: Props) {
     setAnswered(false);
     setSelectedOption(null);
     setFinished(false);
+    setAdminCompleted(false);
+    setShowNextSetConfirm(false);
 
     getQuizSetIds(selectedClass).then(({ data, error }) => {
       if (cancelled) return;
@@ -49,9 +92,15 @@ export function QuizView({ onHome, onFinish, selectedClass, learned }: Props) {
         setLoading(false);
         return;
       }
-      setAvailableSets(data);
-      if (data.length > 0) {
-        setSetId(data[0]);
+
+      let sets = [...data];
+      if (selectedClass === 1) {
+        sets = ['letter-quiz', ...sets];
+      }
+
+      setAvailableSets(sets);
+      if (sets.length > 0) {
+        setSetId(sets[0]);
       } else {
         setLoading(false);
       }
@@ -71,17 +120,27 @@ export function QuizView({ onHome, onFinish, selectedClass, learned }: Props) {
     setAnswered(false);
     setSelectedOption(null);
     setFinished(false);
+    setAdminCompleted(false);
+    setShowNextSetConfirm(false);
 
-    getQuizQuestions(selectedClass, setId).then(({ data, error }) => {
-      if (cancelled) return;
-      if (error) {
-        setError('Failed to load quiz questions');
+    if (setId === 'letter-quiz') {
+      const generated = generateLetterQuizQuestions(selectedClass);
+      if (!cancelled) {
+        setQuestions(generated);
         setLoading(false);
-        return;
       }
-      setQuestions(data ?? []);
-      setLoading(false);
-    });
+    } else {
+      getQuizQuestions(selectedClass, setId).then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          setError('Failed to load quiz questions');
+          setLoading(false);
+          return;
+        }
+        setQuestions(data ?? []);
+        setLoading(false);
+      });
+    }
 
     return () => { cancelled = true; };
   }, [selectedClass, setId]);
@@ -136,6 +195,45 @@ export function QuizView({ onHome, onFinish, selectedClass, learned }: Props) {
 
   const handleSetChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     setSetId(e.target.value);
+  }, []);
+
+  const handleCompleteSet = useCallback(() => {
+    if (!setId || !isSuperAdminMode || questions.length === 0) return;
+    const lastIndex = questions.length - 1;
+    const lastQuestion = questions[lastIndex];
+    setQIndex(lastIndex);
+    setScore(questions.length);
+    setAnswered(true);
+    setSelectedOption(lastQuestion.correct_option);
+    setAdminCompleted(true);
+  }, [setId, isSuperAdminMode, questions]);
+
+  const handleSeeResult = useCallback(() => {
+    if (!isSuperAdminMode) return;
+    setFinished(true);
+    onFinish(score);
+  }, [isSuperAdminMode, onFinish, score]);
+
+  const handleNextSet = useCallback(() => {
+    if (!isSuperAdminMode) return;
+    const currentIndex = availableSets.indexOf(setId);
+    if (currentIndex >= 0 && currentIndex < availableSets.length - 1) {
+      setShowNextSetConfirm(true);
+    }
+  }, [isSuperAdminMode, setId, availableSets]);
+
+  const handleConfirmNextSet = useCallback(() => {
+    if (!isSuperAdminMode) return;
+    setShowNextSetConfirm(false);
+    setAdminCompleted(false);
+    const currentIndex = availableSets.indexOf(setId);
+    if (currentIndex >= 0 && currentIndex < availableSets.length - 1) {
+      setSetId(availableSets[currentIndex + 1]);
+    }
+  }, [isSuperAdminMode, setId, availableSets]);
+
+  const handleCancelNextSet = useCallback(() => {
+    setShowNextSetConfirm(false);
   }, []);
 
   if (loading) {
@@ -241,11 +339,23 @@ export function QuizView({ onHome, onFinish, selectedClass, learned }: Props) {
         >
           {availableSets.map((s) => (
             <option key={s} value={s}>
-              Set {s}
+              {s === 'letter-quiz' ? 'Letter Quiz' : `Set ${s}`}
             </option>
           ))}
         </select>
       </div>
+
+      {isSuperAdminMode && setId && (
+        <div className="mb-4">
+          <button
+            onClick={handleCompleteSet}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-primary-50 px-3 py-1.5 text-xs font-bold text-primary-700 ring-1 ring-primary-100 transition-all hover:bg-primary-100 active:scale-95"
+          >
+            <Check size={14} />
+            Complete Set
+          </button>
+        </div>
+      )}
 
       {/* progress bar */}
       <div className="mb-5 h-2 w-full overflow-hidden rounded-full bg-primary-100">
@@ -323,26 +433,74 @@ export function QuizView({ onHome, onFinish, selectedClass, learned }: Props) {
         )}
 
         {/* next */}
-        <button
-          onClick={handleNext}
-          disabled={!answered}
-          className={`interactive-card mt-4 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 font-bold active:scale-95 ${
-            answered
-              ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md hover:shadow-lg'
-              : 'cursor-not-allowed bg-gray-100 text-gray-400'
-          }`}
-        >
-          {qIndex + 1 >= questions.length ? (
-            <>
-              See Results <Trophy size={18} />
-            </>
-          ) : (
-            <>
-              Next <ArrowRight size={18} />
-            </>
-          )}
-        </button>
+        {adminCompleted && qIndex + 1 >= questions.length ? (
+          <div className="mt-4 flex flex-col gap-2.5 sm:flex-row">
+            <button
+              onClick={handleSeeResult}
+              className="interactive-card flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-700 px-4 py-3.5 font-bold text-white shadow-md hover:shadow-lg active:scale-95"
+            >
+              See Result <Trophy size={18} />
+            </button>
+            {availableSets.indexOf(setId) >= availableSets.length - 1 ? (
+              <div className="flex flex-1 items-center justify-center rounded-2xl bg-gray-50 px-4 py-3.5 text-center text-xs font-bold text-gray-500 ring-1 ring-gray-100">
+                No more sets available
+              </div>
+            ) : (
+              <button
+                onClick={handleNextSet}
+                className="interactive-card flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3.5 font-bold text-primary-700 ring-1 ring-primary-100 hover:bg-primary-50 active:scale-95"
+              >
+                Next Set <ArrowRight size={18} />
+              </button>
+            )}
+          </div>
+        ) : (
+          <button
+            onClick={handleNext}
+            disabled={!answered}
+            className={`interactive-card mt-4 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 font-bold active:scale-95 ${
+              answered
+                ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md hover:shadow-lg'
+                : 'cursor-not-allowed bg-gray-100 text-gray-400'
+            }`}
+          >
+            {qIndex + 1 >= questions.length ? (
+              <>
+                See Results <Trophy size={18} />
+              </>
+            ) : (
+              <>
+                Next <ArrowRight size={18} />
+              </>
+            )}
+          </button>
+        )}
       </div>
+
+      {showNextSetConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="screen-panel liquid-panel w-full max-w-sm rounded-[1.75rem] bg-white p-5 shadow-xl ring-1 ring-primary-100">
+            <p className="text-center text-sm font-bold text-primary-900">Do you want to go to the next set?</p>
+            <p className="mt-1 text-center text-xs text-primary-700">
+              Current set: {availableSets[availableSets.indexOf(setId)]}
+            </p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <button
+                onClick={handleConfirmNextSet}
+                className="interactive-card flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary-600 to-primary-700 px-4 py-3 font-bold text-white shadow-md hover:shadow-lg active:scale-95"
+              >
+                Yes, Next Set
+              </button>
+              <button
+                onClick={handleCancelNextSet}
+                className="interactive-card flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 font-bold text-primary-700 ring-1 ring-primary-100 hover:bg-primary-50 active:scale-95"
+              >
+                Not Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

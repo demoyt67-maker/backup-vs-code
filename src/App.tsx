@@ -7,7 +7,10 @@ import { LearnView } from '@/views/LearnView';
 import { WritingView } from '@/views/WritingView';
 import { ScoreView } from '@/views/ScoreView';
 import { SettingsView } from '@/views/SettingsView';
+import { ReportView } from '@/views/ReportView';
 import { SuperAdminView } from '@/views/SuperAdminView';
+import { SuperAdminStudentsView } from '@/views/SuperAdminStudentsView';
+import { SuperAdminReportsView } from '@/views/SuperAdminReportsView';
 import { FeatureControlView } from '@/views/FeatureControlView';
 import { AnnouncementManagementView } from '@/views/AnnouncementManagementView';
 import { DisabledFeatureView } from '@/views/DisabledFeatureView';
@@ -41,6 +44,7 @@ type EffectiveAppearance = 'light' | 'dark';
 const SELECTED_CLASS_KEY = 'madrasa-selected-class';
 const SUPER_ADMIN_MODE_KEY = 'madrasa-super-admin-test-mode';
 const APPEARANCE_MODE_KEY = 'madrasa-appearance-mode';
+const USTAD_FLOW_KEY = 'madrasa-ustad-flow-requested';
 
 const CLASS_OPTIONS: { level: ClassLevel; title: string; subtitle: string; accent: string; badge: string }[] = [
   { level: 1, title: 'Class 1', subtitle: 'Beginner friendly • simple letters & tracing', accent: 'linear-gradient(135deg, #ffb8c9 0%, #ffd678 50%, #7adbc4 100%)', badge: 'bg-white/15' },
@@ -269,16 +273,20 @@ function App() {
     }
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
-  const [ustadLoginRequested, setUstadLoginRequested] = useState(false);
+  const [ustadLoginRequested, setUstadLoginRequested] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem(USTAD_FLOW_KEY) === 'true';
+  });
   const [testRole, setTestRole] = useState<TestRole>(null);
 
   const { user, loading, initialized, login, logout, isSuperAdmin } = useAuth();
-  const { profile: ustadProfile, status: ustadStatus, loading: ustadLoading, refetch: refetchUstad } = useUstadAuth();
+  const { profile: ustadProfile, status: ustadStatus, loading: ustadLoading, refetch: refetchUstad } = useUstadAuth(user?.email);
   const { isEnabled, features } = useFeatureControl();
 
   const wrappedLogout = useCallback(async () => {
     await logout();
     clearStoredUstadEmail();
+    try { sessionStorage.removeItem(USTAD_FLOW_KEY); } catch { /* ignore */ }
   }, [logout]);
 
   const clearTestRole = useCallback(() => setTestRole(null), []);
@@ -337,7 +345,7 @@ function App() {
   useEffect(() => {
     if (ustadLoading) return;
     const currentView = view;
-    if (ustadStatus === 'approved' && !['home', 'ustadDashboard', 'ustadPanel', 'ustadQuiz', 'ustadLearning', 'ustadDailyIslamic', 'ustadTeaching'].includes(currentView)) {
+    if (ustadStatus === 'approved' && !['home', 'ustadDashboard', 'ustadPanel', 'ustadQuiz', 'ustadLearning', 'ustadDailyIslamic', 'ustadTeaching', 'settings', 'report'].includes(currentView)) {
       setView('home');
     } else if (ustadStatus === 'pending' && currentView !== 'ustadPending') {
       setView('ustadPending');
@@ -346,6 +354,7 @@ function App() {
     } else if (ustadStatus === null && ustadLoginRequested && currentView !== 'ustadRegister') {
       setView('ustadRegister');
       setUstadLoginRequested(false);
+      try { sessionStorage.removeItem(USTAD_FLOW_KEY); } catch { /* ignore */ }
     }
   }, [ustadStatus, ustadLoading, ustadLoginRequested, view]);
 
@@ -381,7 +390,7 @@ function App() {
     : ustadStatus;
 
   const navigate = useCallback((v: View) => {
-    const adminViews: View[] = ['superAdmin', 'cms', 'featureControl', 'announcementManagement', 'dailyIslamic', 'ustadRequests', 'testingCenter'];
+    const adminViews: View[] = ['superAdmin', 'superAdminStudents', 'cms', 'featureControl', 'announcementManagement', 'dailyIslamic', 'ustadRequests', 'testingCenter'];
     if (adminViews.includes(v) && (!isSuperAdmin || !isSuperAdminMode)) return;
 
     if (v === 'ustadPanel' && effectiveUstadStatus !== 'approved') return;
@@ -389,7 +398,8 @@ function App() {
     if ((effectiveUstadStatus === 'pending' || effectiveUstadStatus === 'rejected') &&
         v !== 'ustadPending' &&
         v !== 'ustadRejected' &&
-        v !== 'ustadDashboard') {
+        v !== 'ustadDashboard' &&
+        v !== 'report') {
       return;
     }
 
@@ -455,13 +465,14 @@ function App() {
   }
 
   const isUstadFlow = ustadLoginRequested ||
+    effectiveUstadStatus === 'approved' ||
     view === 'ustadDashboard' ||
     view === 'ustadPending' ||
     view === 'ustadRegister' ||
     view === 'ustadRejected';
 
   if (!user && !isUstadFlow && !testRole) {
-    return <LoginScreen onLogin={login} onUstadLogin={() => setUstadLoginRequested(true)} />;
+    return <LoginScreen onLogin={login} onUstadLogin={() => { try { sessionStorage.setItem(USTAD_FLOW_KEY, 'true'); } catch { /* ignore */ } login(); }} />;
   }
 
   return (
@@ -483,7 +494,8 @@ function App() {
                 theme={selectedTheme}
                 onBack={() => setView('home')}
                 onNavigate={navigate}
-                onLogout={async () => { await logout(); clearStoredUstadEmail(); setUstadLoginRequested(false); }}
+                onLogout={async () => { await logout(); clearStoredUstadEmail(); try { sessionStorage.removeItem(USTAD_FLOW_KEY); } catch { /* ignore */ } setUstadLoginRequested(false); }}
+                email={user?.email}
               />
             )}
             {view === 'ustadPending' && (
@@ -559,6 +571,7 @@ function App() {
             onFinish={recordQuizResult}
             selectedClass={selectedClass}
             learned={learned}
+            isSuperAdminMode={isSuperAdminMode}
           />
         )}
         {selectedClass && view === 'quiz' && !isEnabled('quiz') && (
@@ -618,8 +631,25 @@ function App() {
             onLogout={logout}
           />
         )}
+        {selectedClass && view === 'report' && (
+          <ReportView
+            onBack={() => navigate('settings')}
+          />
+        )}
         {selectedClass && view === 'superAdmin' && isSuperAdmin && isSuperAdminMode && (
           <SuperAdminView
+            onNavigate={navigate}
+            theme={selectedTheme}
+          />
+        )}
+        {selectedClass && view === 'superAdminStudents' && isSuperAdmin && isSuperAdminMode && (
+          <SuperAdminStudentsView
+            onNavigate={navigate}
+            theme={selectedTheme}
+          />
+        )}
+        {selectedClass && view === 'adminReports' && isSuperAdmin && isSuperAdminMode && (
+          <SuperAdminReportsView
             onNavigate={navigate}
             theme={selectedTheme}
           />
@@ -660,7 +690,7 @@ function App() {
           </>
         )}
       </main>
-       {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && view !== 'ustadDashboard' && view !== 'ustadPending' && view !== 'ustadRegister' && view !== 'ustadRejected' && view !== 'ustadRequests' && view !== 'ustadQuiz' && view !== 'ustadPanel' && view !== 'ustadLearning' && view !== 'ustadDailyIslamic' && view !== 'ustadTeaching' && view !== 'dailyIslamic' && view !== 'testingCenter' && (
+        {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'superAdminStudents' && view !== 'adminReports' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && view !== 'ustadDashboard' && view !== 'ustadPending' && view !== 'ustadRegister' && view !== 'ustadRejected' && view !== 'ustadRequests' && view !== 'ustadQuiz' && view !== 'ustadPanel' && view !== 'ustadLearning' && view !== 'ustadDailyIslamic' && view !== 'ustadTeaching' && view !== 'dailyIslamic' && view !== 'testingCenter' && (
         <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={wrappedLogout} />
       )}
     </div>

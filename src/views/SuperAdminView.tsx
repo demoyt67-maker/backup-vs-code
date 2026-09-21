@@ -28,9 +28,10 @@ const GENERAL: AdminSection[] = [
   },
   {
     title: 'Reports',
-    description: 'View learning progress, quiz results, and usage statistics.',
+    description: 'View and manage user-submitted reports and corrections.',
     icon: '📑',
-    status: 'Coming Soon',
+    view: 'adminReports',
+    status: 'Open',
   },
   {
     title: 'Settings',
@@ -45,7 +46,8 @@ const USERS: AdminSection[] = [
     title: 'Students',
     description: 'View and manage student accounts and progress.',
     icon: '🎓',
-    status: 'Coming Soon',
+    view: 'superAdminStudents',
+    status: 'Open',
   },
   {
     title: 'Ustads',

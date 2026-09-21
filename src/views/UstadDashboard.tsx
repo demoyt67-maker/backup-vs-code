@@ -13,10 +13,11 @@ interface Props {
   onBack: () => void | Promise<void>;
   onNavigate: (v: View) => void;
   onLogout: () => void | Promise<void>;
+  email?: string | null;
 }
 
-export function UstadDashboard({ theme, onBack, onNavigate, onLogout }: Props) {
-  const { profile } = useUstadAuth();
+export function UstadDashboard({ theme, onBack, onNavigate, onLogout, email }: Props) {
+  const { profile } = useUstadAuth(email);
   const initials = useMemo(() => {
     const name = profile?.full_name || 'Ustad';
     return name

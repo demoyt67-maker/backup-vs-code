@@ -60,6 +60,30 @@ export async function getUstadProfileByEmail(email: string) {
   return { data, error: null };
 }
 
+export interface ProfileRecord {
+  id: string;
+  role: string | null;
+}
+
+export async function getAllProfiles() {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, role')
+    .order('id', { ascending: true });
+
+  if (error) {
+    console.error('Get all profiles error:', error);
+    return { data: null as ProfileRecord[] | null, error };
+  }
+
+  const filtered = (data ?? []).filter((p) => {
+    const normalized = (p.role ?? '').trim().toLowerCase();
+    return normalized !== 'super_admin' && normalized !== 'ustad';
+  });
+
+  return { data: filtered, error: null };
+}
+
 export async function createUstadProfile(payload: { email: string; full_name: string; age: number; photo_url: string | null }) {
   const { data, error } = await supabase
     .from('ustad_profiles')
@@ -690,5 +714,134 @@ export async function restoreTeachingContent(id: string) {
   }
 
   return { data, error: null };
+}
+
+export type ReportType = 'learning_content' | 'learning_bug' | 'app_bug';
+
+export interface ReportRecord {
+  id: string;
+  reporter_id: string;
+  reporter_email: string;
+  reporter_role: 'student' | 'ustad' | 'super_admin';
+  report_type: ReportType;
+  description: string;
+  related_content_type: string | null;
+  related_content_id: string | null;
+  status: 'open' | 'in_review' | 'resolved' | 'rejected';
+  admin_response: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getReports(reporterId: string) {
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .eq('reporter_id', reporterId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Get reports error:', error);
+    return { data: null as ReportRecord[] | null, error };
+  }
+
+  return { data: (data ?? []) as ReportRecord[], error: null };
+}
+
+export async function getReportById(id: string) {
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    console.error('Get report error:', error);
+    return { data: null as ReportRecord | null, error };
+  }
+
+  return { data: data as ReportRecord, error: null };
+}
+
+export async function createReport(payload: {
+  reporterId: string;
+  reporterEmail: string;
+  reporterRole: 'student' | 'ustad' | 'super_admin';
+  reportType: ReportType;
+  description: string;
+  relatedContentType?: string | null;
+  relatedContentId?: string | null;
+}) {
+  console.log('[REPORT DEBUG] insert payload:', {
+    reporter_id: payload.reporterId,
+    reporter_email: payload.reporterEmail,
+    reporter_role: payload.reporterRole,
+    report_type: payload.reportType,
+    description: payload.description,
+    status: 'open',
+    related_content_type: payload.relatedContentType ?? null,
+    related_content_id: payload.relatedContentId ?? null,
+  });
+
+  const { data, error } = await supabase
+    .from('reports')
+    .insert({
+      reporter_id: payload.reporterId,
+      reporter_email: payload.reporterEmail,
+      reporter_role: payload.reporterRole,
+      report_type: payload.reportType,
+      description: payload.description,
+      status: 'open',
+      related_content_type: payload.relatedContentType ?? null,
+      related_content_id: payload.relatedContentId ?? null,
+    })
+    .select()
+    .single();
+
+  console.log('[REPORT DEBUG] inserted reporter_role:', data?.reporter_role, 'error:', error);
+
+  if (error) {
+    console.error('Create report error:', error);
+    return { data: null, error };
+  }
+
+  return { data, error: null };
+}
+
+export async function getAllReports() {
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Get all reports error:', error);
+    return { data: null as ReportRecord[] | null, error };
+  }
+
+  return { data: (data ?? []) as ReportRecord[], error: null };
+}
+
+export async function updateReport(id: string, payload: {
+  status?: ReportRecord['status'];
+  admin_response?: string | null;
+}) {
+  const updateData: Record<string, unknown> = {};
+  if (payload.status !== undefined) updateData.status = payload.status;
+  if (payload.admin_response !== undefined) updateData.admin_response = payload.admin_response;
+
+  const { data, error } = await supabase
+    .from('reports')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Update report error:', error);
+    return { data: null as ReportRecord | null, error };
+  }
+
+  return { data: data as ReportRecord, error: null };
 }
 

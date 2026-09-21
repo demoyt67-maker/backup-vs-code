@@ -112,7 +112,7 @@ export function useCMSClass1Data(): CMSClass1Data {
               letters: [] as ArabicLetter[],
             }));
 
-          if (cachedLevels.length > 0 && cached.letters.length > 0) {
+          if (cachedLevels.length > 0 && cached.letters.length > 0 && cachedLevels.every((lvl) => Array.isArray(lvl.letters) && lvl.letters.length > 0)) {
             if (!cancelled) {
               setLevels(cachedLevels);
               setLetters(cached.letters);

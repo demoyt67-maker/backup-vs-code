@@ -40,6 +40,7 @@ import {
   type SetId,
 } from '@/data/learningSets';
 import { ARABIC_LETTERS, TOTAL_LETTERS, type ArabicLetter } from '@/data/letters';
+import { ARABIC_WORDS } from '@/data/arabicWords';
 import { useCMSClass1Data } from '@/hooks/useCMSClass1Data';
 import { useCMSClass2Data } from '@/hooks/useCMSClass2Data';
 
@@ -92,8 +93,6 @@ const AVAILABLE_SETS_BY_CLASS: Record<1 | 2 | 3, SetId[]> = {
   3: [],
 };
 
-const availableSets = AVAILABLE_SETS_BY_CLASS[selectedClass];
-
 export function LearnView({
   onHome,
   selectedClass,
@@ -113,9 +112,12 @@ export function LearnView({
   wordsLearned,
   onToggleWord,
   onMarkWord,
+  alphabetOrderLearned,
+  onToggleAlphabetOrder,
   onResetLearning,
   isSuperAdminMode,
-}: Props) {
+  }: Props) {
+  const availableSets = AVAILABLE_SETS_BY_CLASS[selectedClass];
   const cms = useCMSClass1Data();
   const cmsLevels = (cms.usingCMS && cms.levels.length > 0) ? cms.levels : SET1_LEVELS;
   const cmsLetters = (cms.usingCMS && cms.letters.length > 0) ? cms.letters : ARABIC_LETTERS;
@@ -178,6 +180,7 @@ export function LearnView({
     if (isSuperAdminMode) return true;
     if (level === 1) return true;
     const prev = cmsLevels[level - 2];
+    if (!prev) return false;
     return prev.letters.every((l) => learned.has(l.index));
   };
 
@@ -412,7 +415,7 @@ export function LearnView({
         <>
           <SetSummaryHeader
             title={SET1_TITLE}
-            subtitle={`${cmsLevels.length} levels • ${cmsLevels[0]?.letters.length ?? 4} letters each`}
+            subtitle={`${cmsLevels.length} levels • ${(cmsLevels[0]?.letters?.length ?? SET1_LEVEL_SIZE)} letters each`}
             count={`${learned.size}/${set1TotalLetters}`}
             countLabel="Letters learned"
             gradient="from-primary-700 to-primary-950"
@@ -423,7 +426,7 @@ export function LearnView({
           />
           <div className="space-y-3">
             {cmsLevels.map(({ level, letters: levelLetters }) => {
-              const letters = levelLetters.length > 0 ? levelLetters : ARABIC_LETTERS.slice(0, SET1_LEVEL_SIZE);
+              const letters = (levelLetters && levelLetters.length > 0) ? levelLetters : ARABIC_LETTERS.slice(0, SET1_LEVEL_SIZE);
               const unlocked = isSet1LevelUnlocked(level);
               const completed = set1LevelCompletedCount(letters);
               const allDone = completed === letters.length;

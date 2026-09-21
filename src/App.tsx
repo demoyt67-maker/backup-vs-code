@@ -45,6 +45,7 @@ const SELECTED_CLASS_KEY = 'madrasa-selected-class';
 const SUPER_ADMIN_MODE_KEY = 'madrasa-super-admin-test-mode';
 const APPEARANCE_MODE_KEY = 'madrasa-appearance-mode';
 const USTAD_FLOW_KEY = 'madrasa-ustad-flow-requested';
+const ADMIN_VIEWS: View[] = ['superAdmin', 'superAdminStudents', 'cms', 'featureControl', 'announcementManagement', 'dailyIslamic', 'ustadRequests', 'testingCenter'];
 
 const CLASS_OPTIONS: { level: ClassLevel; title: string; subtitle: string; accent: string; badge: string }[] = [
   { level: 1, title: 'Class 1', subtitle: 'Beginner friendly • simple letters & tracing', accent: 'linear-gradient(135deg, #ffb8c9 0%, #ffd678 50%, #7adbc4 100%)', badge: 'bg-white/15' },
@@ -345,7 +346,7 @@ function App() {
   useEffect(() => {
     if (ustadLoading) return;
     const currentView = view;
-    if (ustadStatus === 'approved' && !['home', 'ustadDashboard', 'ustadPanel', 'ustadQuiz', 'ustadLearning', 'ustadDailyIslamic', 'ustadTeaching', 'settings', 'report', ...adminViews].includes(currentView)) {
+    if (ustadStatus === 'approved' && !['home', 'ustadDashboard', 'ustadPanel', 'ustadQuiz', 'ustadLearning', 'ustadDailyIslamic', 'ustadTeaching', 'settings', 'report', ...ADMIN_VIEWS].includes(currentView)) {
       setView('home');
     } else if (ustadStatus === 'pending' && currentView !== 'ustadPending') {
       setView('ustadPending');
@@ -356,7 +357,7 @@ function App() {
       setUstadLoginRequested(false);
       try { sessionStorage.removeItem(USTAD_FLOW_KEY); } catch { /* ignore */ }
     }
-  }, [ustadStatus, ustadLoading, ustadLoginRequested, view, adminViews]);
+  }, [ustadStatus, ustadLoading, ustadLoginRequested, view]);
 
   const currentClassOnSelection = selectedClass ?? loadSelectedClass();
   const effectiveAppearance = getEffectiveAppearance(appearanceMode, systemPrefersDark);
@@ -390,8 +391,7 @@ function App() {
     : ustadStatus;
 
   const navigate = useCallback((v: View) => {
-    const adminViews: View[] = ['superAdmin', 'superAdminStudents', 'cms', 'featureControl', 'announcementManagement', 'dailyIslamic', 'ustadRequests', 'testingCenter'];
-    if (adminViews.includes(v) && (!isSuperAdmin || !isSuperAdminMode)) return;
+    if (ADMIN_VIEWS.includes(v) && (!isSuperAdmin || !isSuperAdminMode)) return;
 
     if (v === 'ustadPanel' && effectiveUstadStatus !== 'approved') return;
 

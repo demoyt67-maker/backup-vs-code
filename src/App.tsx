@@ -345,7 +345,7 @@ function App() {
   useEffect(() => {
     if (ustadLoading) return;
     const currentView = view;
-    if (ustadStatus === 'approved' && !['home', 'ustadDashboard', 'ustadPanel', 'ustadQuiz', 'ustadLearning', 'ustadDailyIslamic', 'ustadTeaching', 'settings', 'report'].includes(currentView)) {
+    if (ustadStatus === 'approved' && !['home', 'ustadDashboard', 'ustadPanel', 'ustadQuiz', 'ustadLearning', 'ustadDailyIslamic', 'ustadTeaching', 'settings', 'report', ...adminViews].includes(currentView)) {
       setView('home');
     } else if (ustadStatus === 'pending' && currentView !== 'ustadPending') {
       setView('ustadPending');
@@ -356,7 +356,7 @@ function App() {
       setUstadLoginRequested(false);
       try { sessionStorage.removeItem(USTAD_FLOW_KEY); } catch { /* ignore */ }
     }
-  }, [ustadStatus, ustadLoading, ustadLoginRequested, view]);
+  }, [ustadStatus, ustadLoading, ustadLoginRequested, view, adminViews]);
 
   const currentClassOnSelection = selectedClass ?? loadSelectedClass();
   const effectiveAppearance = getEffectiveAppearance(appearanceMode, systemPrefersDark);
@@ -644,6 +644,12 @@ function App() {
         )}
         {selectedClass && view === 'superAdminStudents' && isSuperAdmin && isSuperAdminMode && (
           <SuperAdminStudentsView
+            onNavigate={navigate}
+            theme={selectedTheme}
+          />
+        )}
+        {selectedClass && view === 'ustadRequests' && isSuperAdmin && isSuperAdminMode && (
+          <UstadRequestsView
             onNavigate={navigate}
             theme={selectedTheme}
           />

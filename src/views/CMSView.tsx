@@ -420,7 +420,7 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
         description: lettersLabel(arabicLetters.map((a, i) => ({ arabic: a, english: englishNames[i] }))),
         sort_order: sortOrder,
         is_active: true,
-      })
+      }, { onConflict: 'class_level,lesson_key' })
       .select()
       .single();
 
@@ -464,7 +464,8 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
     const { error } = await supabase
       .from('cms_lessons')
       .delete()
-      .eq('id', lessonId);
+      .eq('lesson_key', lessonId)
+      .eq('class_level', 1);
 
     if (error) {
       throw new Error(error.message || 'Failed to delete lesson');
@@ -521,6 +522,9 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
             </p>
           </div>
           <button
+            onClick={() =>
+              setEditingLesson({ id: `new-lesson-${Date.now()}`, title: '', description: '' })
+            }
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
             style={{ background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.primaryStrong} 100%)` }}
           >
@@ -734,7 +738,7 @@ function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
         description: existingLesson?.description || '',
         sort_order: sortOrder,
         is_active: true,
-      })
+      }, { onConflict: 'class_level,lesson_key' })
       .select()
       .single();
 
@@ -750,7 +754,8 @@ function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
     const { error } = await supabase
       .from('cms_lessons')
       .delete()
-      .eq('id', lessonId);
+      .eq('lesson_key', lessonId)
+      .eq('class_level', 2);
 
     if (error) {
       throw new Error(error.message || 'Failed to delete lesson');
@@ -803,6 +808,16 @@ function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
               Manage tanween, words, and advanced practice materials for Class 2.
             </p>
           </div>
+          <button
+            onClick={() =>
+              setEditingLesson({ id: `new-lesson-${Date.now()}`, title: '', description: '' })
+            }
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
+            style={{ background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.primaryStrong} 100%)` }}
+          >
+            <Plus size={18} />
+            Add Lesson
+          </button>
         </div>
       </div>
 

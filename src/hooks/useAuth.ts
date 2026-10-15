@@ -52,6 +52,18 @@ export function useAuth() {
 
         if (error || !data) {
           console.log('[useAuth] fetchRole failed: error or no data');
+          // The direct client read can be blocked by RLS or miss the row.
+          // Fall back to the security-definer RPC, which bypasses RLS and
+          // evaluates profiles.role server-side for the current auth user.
+          try {
+            const { data: rpcData, error: rpcError } = await supabase.rpc('check_my_admin_status');
+            if (mounted && roleFetchId === currentFetchId && !rpcError && rpcData === true) {
+              setRole('super_admin');
+              return;
+            }
+          } catch {
+            // RPC unavailable (migration not applied) - remain non-admin.
+          }
           setRole(null);
           return;
         }

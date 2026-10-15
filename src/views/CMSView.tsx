@@ -23,6 +23,20 @@ interface Lesson {
   letters?: { arabic: string; english: string }[];
 }
 
+// The learning-set a CMS lesson belongs to. Each maps to a recognized
+// `setX-level-N` lesson_key prefix and to a specific content type in
+// src/hooks/useCMSClass1Data.ts / useCMSClass2Data.ts.
+type LessonType = 'letters' | 'harakat' | 'alphabet' | 'sukoon' | 'tanween' | 'words';
+
+const LESSON_TYPES: { key: LessonType; label: string; prefix: string; classLevel: 1 | 2; description: string }[] = [
+  { key: 'letters', label: 'Letters', prefix: 'set1', classLevel: 1, description: 'Arabic letters (Set 1)' },
+  { key: 'harakat', label: 'Harakat', prefix: 'set2', classLevel: 1, description: 'Letter + haraka combinations (Set 2)' },
+  { key: 'alphabet', label: 'Alphabet Order', prefix: 'set3', classLevel: 1, description: 'Alphabet sequence practice (Set 3)' },
+  { key: 'sukoon', label: 'Sukoon', prefix: 'set4', classLevel: 1, description: 'Letters with sukoon (Set 4)' },
+  { key: 'tanween', label: 'Tanween', prefix: 'set5', classLevel: 2, description: 'Letter + tanween combinations (Set 5)' },
+  { key: 'words', label: 'Words', prefix: 'set6', classLevel: 2, description: 'Arabic words (Set 6)' },
+];
+
 const CMS_SECTIONS: { key: CMSSection; title: string; description: string; icon: string; accent: string }[] = [
   {
     key: 'class1',
@@ -74,6 +88,23 @@ function newLessonId(): string {
     return `new-lesson-${crypto.randomUUID()}`;
   }
   return `new-lesson-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// Computes the next available `setX-level-N` lesson key for the chosen
+// learning set, skipping any number already in use so the (class_level,
+// lesson_key) unique constraint is never violated. The `setX` prefix is the
+// learning set (e.g. "set3"); only rows matching `<prefix>-level-<n>` count,
+// so container rows like the bare "set3" are ignored.
+function nextLevelKey(lessons: Lesson[], prefix: string): string {
+  const pattern = new RegExp(`^${prefix}-level-(\\d+)$`);
+  const nums = lessons
+    .map((l) => {
+      const m = l.id.match(pattern);
+      return m ? parseInt(m[1], 10) : 0;
+    })
+    .filter((n) => n > 0);
+  const next = nums.length ? Math.max(...nums) + 1 : 1;
+  return `${prefix}-level-${next}`;
 }
 
 function extractBaseLetter(combined: string): string {
@@ -326,6 +357,7 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
+  const [addingLessonType, setAddingLessonType] = useState<LessonType | null>(null);
   const [managingLessonId, setManagingLessonId] = useState<string | null>(null);
   const [managingLessonTitle, setManagingLessonTitle] = useState<string>('');
   const [deleteTarget, setDeleteTarget] = useState<Lesson | null>(null);
@@ -421,6 +453,14 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
 
     if (!title || !title.trim()) {
       throw new Error('Lesson title is required.');
+    }
+
+    // A brand-new lesson must have been created via the Add Lesson flow,
+    // which assigns a valid `setX-level-N` key. Reject arbitrary ids so
+    // the student Learn page (which only renders recognized keys) never
+    // receives an orphaned lesson.
+    if (lessonId.startsWith('new-lesson-')) {
+      throw new Error('Invalid lesson key. Use the Add Lesson button to create a new lesson.');
     }
 
     const existingLesson = lessons.find((l) => l.id === lessonId);
@@ -537,9 +577,7 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
             </p>
           </div>
           <button
-            onClick={() =>
-              setEditingLesson({ id: newLessonId(), title: '', description: '' })
-            }
+            onClick={() => setAddingLessonType('letters')}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
             style={{ background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.primaryStrong} 100%)` }}
           >
@@ -672,6 +710,43 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
           </div>
         </div>
       )}
+      {addingLessonType && (
+        <div className="animate-fade-in">
+          <div className="mb-6">
+            <button
+              onClick={() => setAddingLessonType(null)}
+              className="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-700 transition-all hover:-translate-y-0.5 hover:shadow-md"
+              style={{ background: theme.accentSoft }}
+            >
+              <ArrowLeft size={16} />
+              Back to Lessons
+            </button>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-2xl font-black text-primary-900 md:text-3xl">Choose Lesson Type</h2>
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary-600">
+                Select the content type for the new Class 1 lesson
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {LESSON_TYPES.filter((t) => t.classLevel === 1).map((t) => (
+              <button
+                key={t.key}
+                onClick={() => {
+                  const id = nextLevelKey(lessons, t.prefix);
+                  setEditingLesson({ id, title: '', description: '' });
+                  setAddingLessonType(null);
+                }}
+                className="liquid-panel flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
+                style={{ borderColor: theme.border, background: theme.surface }}
+              >
+                <span className="text-lg font-black text-primary-900">{t.label}</span>
+                <span className="text-xs text-primary-700">{t.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -681,6 +756,7 @@ function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
+  const [addingLessonType, setAddingLessonType] = useState<LessonType | null>(null);
   const [managingWords, setManagingWords] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Lesson | null>(null);
   const [saving, setSaving] = useState(false);
@@ -743,6 +819,14 @@ function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
   async function handleSave(lessonId: string, title: string) {
     if (!title || !title.trim()) {
       throw new Error('Lesson title is required.');
+    }
+
+    // A brand-new lesson must have been created via the Add Lesson flow,
+    // which assigns a valid `setX-level-N` key. Reject arbitrary ids so
+    // the student Learn page (which only renders recognized keys) never
+    // receives an orphaned lesson.
+    if (lessonId.startsWith('new-lesson-')) {
+      throw new Error('Invalid lesson key. Use the Add Lesson button to create a new lesson.');
     }
 
     const existingLesson = lessons.find((l) => l.id === lessonId);
@@ -828,9 +912,7 @@ function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
             </p>
           </div>
           <button
-            onClick={() =>
-              setEditingLesson({ id: newLessonId(), title: '', description: '' })
-            }
+            onClick={() => setAddingLessonType('tanween')}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
             style={{ background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.primaryStrong} 100%)` }}
           >
@@ -899,6 +981,44 @@ function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
                   )}
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {addingLessonType && (
+        <div className="animate-fade-in">
+          <div className="mb-6">
+            <button
+              onClick={() => setAddingLessonType(null)}
+              className="mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-700 transition-all hover:-translate-y-0.5 hover:shadow-md"
+              style={{ background: theme.accentSoft }}
+            >
+              <ArrowLeft size={16} />
+              Back to Lessons
+            </button>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-2xl font-black text-primary-900 md:text-3xl">Choose Lesson Type</h2>
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary-600">
+                Select the content type for the new Class 2 lesson
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {LESSON_TYPES.filter((t) => t.classLevel === 2).map((t) => (
+              <button
+                key={t.key}
+                onClick={() => {
+                  const id = nextLevelKey(lessons, t.prefix);
+                  setEditingLesson({ id, title: '', description: '' });
+                  setAddingLessonType(null);
+                }}
+                className="liquid-panel flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
+                style={{ borderColor: theme.border, background: theme.surface }}
+              >
+                <span className="text-lg font-black text-primary-900">{t.label}</span>
+                <span className="text-xs text-primary-700">{t.description}</span>
+              </button>
             ))}
           </div>
         </div>

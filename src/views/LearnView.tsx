@@ -142,6 +142,19 @@ export function LearnView({
   const effectiveSet5Levels = (cmsClass2.usingCMS && cmsClass2.tanweenLevels.length > 0) ? cmsClass2.tanweenLevels : SET5_LEVELS;
   const effectiveSet6Levels = (cmsClass2.usingCMS && cmsClass2.wordLevels.length > 0) ? cmsClass2.wordLevels : SET6_LEVELS;
   const cmsWords = (cmsClass2.usingCMS && cmsClass2.words.length > 0) ? cmsClass2.words : ARABIC_WORDS;
+
+  // Set 3 (Alphabet Order) is the one Class 1 set whose CMS data the hook
+  // already computes (cms.alphabetOrderLevels) but the render path did not
+  // use. Wire it in here, falling back to the static levels when CMS data is
+  // unavailable so existing lessons and progress are untouched.
+  const effectiveSet3Levels = (cms.usingCMS && cms.alphabetOrderLevels.length > 0)
+    ? cms.alphabetOrderLevels
+    : SET3_LEVELS;
+
+  const set3RequiredKeys = effectiveSet3Levels.flatMap((lvl) =>
+    lvl.items.map((item) => alphabetOrderKey(item.position))
+  );
+  const set3TotalItems = set3RequiredKeys.length;
   const set5RequiredKeys = effectiveSet5Levels.flatMap((lvl) => [
     ...lvl.items.map((item) => tanweenItemKey(item.letter.index, item.tanween)),
     ...(lvl.readingItems ?? []).map((_, index) => `s5-read-${lvl.level}-${index}`),
@@ -155,7 +168,7 @@ export function LearnView({
   // ----- Completion checks -----
   const set1Complete = learned.size >= set1TotalLetters;
   const set2Complete = set2RequiredKeys.every((key) => harakatLearned.has(key));
-  const set3Complete = SET3_REQUIRED_KEYS.every((key) => alphabetOrderLearned.has(key));
+  const set3Complete = set3RequiredKeys.every((key) => alphabetOrderLearned.has(key));
   const readingPracticeCompletedCount = SIMPLE_READING_PRACTICE_ITEMS.filter((item) => readingPracticeLearned.has(item.id)).length;
   const interactiveHarakatPracticeCompletedCount = interactiveHarakatPracticeLearned.size;
   const set4Complete = set4RequiredKeys.every((key) => sukoonLearned.has(key));
@@ -163,7 +176,7 @@ export function LearnView({
   const set6Complete = SET6_REQUIRED_KEYS.every((key) => wordsLearned.has(key));
 
   const set2CompletedCount = set2RequiredKeys.filter((key) => harakatLearned.has(key)).length;
-  const set3CompletedCount = SET3_REQUIRED_KEYS.filter((key) => alphabetOrderLearned.has(key)).length;
+  const set3CompletedCount = set3RequiredKeys.filter((key) => alphabetOrderLearned.has(key)).length;
   const set4CompletedCount = set4RequiredKeys.filter((key) => sukoonLearned.has(key)).length;
   const set5CompletedCount = set5RequiredKeys.filter((key) => tanweenLearned.has(key)).length;
   const set6CompletedCount = SET6_REQUIRED_KEYS.filter((key) => wordsLearned.has(key)).length;
@@ -204,12 +217,12 @@ export function LearnView({
     if (isSuperAdminMode) return true;
     if (!set3Unlocked) return false;
     if (level === 1) return true;
-    const prev = SET3_LEVELS[level - 2];
+    const prev = effectiveSet3Levels[level - 2];
     return prev.items.every((item) => alphabetOrderLearned.has(alphabetOrderKey(item.position)));
   };
 
   const set3LevelCompletedCount = (level: number): number => {
-    const lvl = SET3_LEVELS[level - 1];
+    const lvl = effectiveSet3Levels[level - 1];
     return lvl.items.filter((item) => alphabetOrderLearned.has(alphabetOrderKey(item.position))).length;
   };
 
@@ -311,7 +324,7 @@ export function LearnView({
     {
       id: 'set3',
       title: SET3_TITLE,
-      subtitle: set3Unlocked ? `${SET3_TOTAL_LEVELS} levels • ${set3CompletedCount}/${SET3_TOTAL_ITEMS} learned` : 'Complete Set 2 to unlock',
+      subtitle: set3Unlocked ? `${effectiveSet3Levels.length} levels • ${set3CompletedCount}/${set3TotalItems} learned` : 'Complete Set 2 to unlock',
       icon: Star,
       unlocked: set3Unlocked,
       complete: set3Complete,
@@ -715,17 +728,17 @@ export function LearnView({
         <>
           <SetSummaryHeader
             title={SET3_TITLE}
-            subtitle={`${SET3_TOTAL_LEVELS} levels • alphabet sequence`}
-            count={`${set3CompletedCount}/${SET3_TOTAL_ITEMS}`}
+            subtitle={`${effectiveSet3Levels.length} levels • alphabet sequence`}
+            count={`${set3CompletedCount}/${set3TotalItems}`}
             countLabel="Items learned"
             gradient="from-primary-600 to-primary-800"
             barColor="from-white to-white"
-            pct={Math.min(100, (set3CompletedCount / SET3_TOTAL_ITEMS) * 100)}
+            pct={Math.min(100, (set3CompletedCount / set3TotalItems) * 100)}
             icon={<Star size={24} />}
             barBg="bg-white/20"
           />
           <div className="space-y-3">
-            {SET3_LEVELS.map((lvl) => {
+            {effectiveSet3Levels.map((lvl) => {
               const unlocked = isSet3LevelUnlocked(lvl.level);
               const completed = set3LevelCompletedCount(lvl.level);
               const allDone = completed === lvl.items.length;
@@ -776,7 +789,7 @@ export function LearnView({
                   </div>
                   {!allDone && (
                     <p className="mt-3 text-center text-xs text-primary-700/70">
-                      Complete all {lvl.items.length} letters to unlock Level {lvl.level + 1 <= SET3_TOTAL_LEVELS ? lvl.level + 1 : '—'}
+                      Complete all {lvl.items.length} letters to unlock Level {lvl.level + 1 <= effectiveSet3Levels.length ? lvl.level + 1 : '—'}
                     </p>
                   )}
                 </LevelCard>

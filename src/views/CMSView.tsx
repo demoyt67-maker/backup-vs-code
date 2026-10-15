@@ -65,6 +65,17 @@ function lettersLabel(letters: { arabic: string; english: string }[]): string {
   return letters.map((l) => `${l.arabic} ${l.english}`).join(', ');
 }
 
+// Generates a unique id for a brand-new lesson. Using a random component
+// (not just Date.now()) avoids collisions on rapid double-clicks, which
+// would otherwise cause one upsert to silently overwrite another via the
+// (class_level, lesson_key) unique constraint.
+function newLessonId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `new-lesson-${crypto.randomUUID()}`;
+  }
+  return `new-lesson-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function extractBaseLetter(combined: string): string {
   for (const letter of ARABIC_LETTERS) {
     if (combined.startsWith(letter.arabic)) {
@@ -408,6 +419,10 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
       throw new Error('Letter count mismatch: Arabic letters and English names must have the same length.');
     }
 
+    if (!title || !title.trim()) {
+      throw new Error('Lesson title is required.');
+    }
+
     const existingLesson = lessons.find((l) => l.id === lessonId);
     const sortOrder = existingLesson ? Math.max(1, lessons.indexOf(existingLesson) + 1) : lessons.length + 1;
 
@@ -523,7 +538,7 @@ function Class1ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
           </div>
           <button
             onClick={() =>
-              setEditingLesson({ id: `new-lesson-${Date.now()}`, title: '', description: '' })
+              setEditingLesson({ id: newLessonId(), title: '', description: '' })
             }
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
             style={{ background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.primaryStrong} 100%)` }}
@@ -726,6 +741,10 @@ function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
   }
 
   async function handleSave(lessonId: string, title: string) {
+    if (!title || !title.trim()) {
+      throw new Error('Lesson title is required.');
+    }
+
     const existingLesson = lessons.find((l) => l.id === lessonId);
     const sortOrder = existingLesson ? Math.max(1, lessons.indexOf(existingLesson) + 1) : lessons.length + 1;
 
@@ -810,7 +829,7 @@ function Class2ContentManagement({ theme, onBack }: { theme: Theme; onBack: () =
           </div>
           <button
             onClick={() =>
-              setEditingLesson({ id: `new-lesson-${Date.now()}`, title: '', description: '' })
+              setEditingLesson({ id: newLessonId(), title: '', description: '' })
             }
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
             style={{ background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.primaryStrong} 100%)` }}

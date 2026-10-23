@@ -2,13 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { SET1_LEVELS, SET2_LEVELS, SET3_LEVELS, SET4_LEVELS, type HarakatLevel, type HarakatItem, type HarakaType, type AlphabetOrderLevel, type SukoonLevel } from '@/data/learningSets';
 import { ARABIC_LETTERS } from '@/data/letters';
-import type { ArabicLetter, LetterLevel } from '@/data/learningSets';
+import type { ArabicLetter } from '@/data/letters';
+import type { LetterLevel } from '@/data/learningSets';
 
 const CACHE_KEY = 'cms-class1-cache';
 const CACHE_TTL_MS = 30_000;
 
 interface CachedCMSData {
   lessons: Lesson[];
+  levels?: LetterLevel[];
   letters: ArabicLetter[];
   harakatLevels: HarakatLevel[];
   alphabetOrderLevels: AlphabetOrderLevel[];
@@ -105,12 +107,7 @@ export function useCMSClass1Data(): CMSClass1Data {
       try {
         const cached = readCache();
         if (cached) {
-          const cachedLevels = cached.lessons
-            .filter((l) => l.lesson_key?.startsWith('set1-level-'))
-            .map((l, i) => ({
-              level: i + 1,
-              letters: [] as ArabicLetter[],
-            }));
+          const cachedLevels = Array.isArray(cached.levels) ? cached.levels : [];
 
           if (cachedLevels.length > 0 && cached.letters.length > 0 && cachedLevels.every((lvl) => Array.isArray(lvl.letters) && lvl.letters.length > 0)) {
             if (!cancelled) {
@@ -140,6 +137,11 @@ export function useCMSClass1Data(): CMSClass1Data {
           .order('sort_order', { ascending: true });
 
         if (lessonsError || !cmsLessons || cmsLessons.length === 0) {
+          if (lessonsError) {
+            console.error('[CMS Class1] Failed to load cms_lessons:', lessonsError.message, lessonsError.code);
+          } else {
+            console.warn('[CMS Class1] cms_lessons returned 0 rows (class_level=1, is_active=true).');
+          }
           if (!cancelled) {
             setError(lessonsError ? `Failed to load CMS lessons: ${lessonsError.message}` : 'No active Class 1 lessons found');
             setLevels(SET1_LEVELS);
@@ -161,6 +163,11 @@ export function useCMSClass1Data(): CMSClass1Data {
           .order('position', { ascending: true });
 
         if (lettersError || !cmsLetters || cmsLetters.length === 0) {
+          if (lettersError) {
+            console.error('[CMS Class1] Failed to load cms_lesson_letters:', lettersError.message, lettersError.code);
+          } else {
+            console.warn('[CMS Class1] cms_lesson_letters returned 0 rows for lessons:', lessonIds);
+          }
           if (!cancelled) {
             setError(lettersError ? `Failed to load CMS letters: ${lettersError.message}` : 'No CMS letters found');
             setLevels(SET1_LEVELS);
@@ -174,11 +181,13 @@ export function useCMSClass1Data(): CMSClass1Data {
           return;
         }
 
+        const lessonKeyById = new Map<string, string | undefined>(cmsLessons.map((l) => [l.id, l.lesson_key]));
+
         const lettersByLessonId = new Map<string, ArabicLetter[]>();
         const harakatItemsByLessonId = new Map<string, HarakatItem[]>();
         for (const cl of cmsLetters) {
           if (cl.lesson_id) {
-            if (cl.lesson_id.startsWith('set2-level-')) {
+            if (lessonKeyById.get(cl.lesson_id)?.startsWith('set2-level-')) {
               const arr = harakatItemsByLessonId.get(cl.lesson_id) ?? [];
               arr.push(...parseHarakatItems([cl]));
               harakatItemsByLessonId.set(cl.lesson_id, arr);
@@ -272,6 +281,7 @@ export function useCMSClass1Data(): CMSClass1Data {
 
         writeCache({
           lessons: cmsLessons,
+          levels: cmsLevels,
           letters: uniqueLetters,
           harakatLevels: cmsHarakatLevels,
           alphabetOrderLevels: cmsAlphabetOrderLevels,

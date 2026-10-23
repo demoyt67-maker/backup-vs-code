@@ -1097,6 +1097,7 @@ interface CmsLetterRow {
 function LetterManagement({ lessonId, lessonTitle, theme, onBack }: { lessonId: string; lessonTitle: string; theme: Theme; onBack: () => void }) {
   const [letters, setLetters] = useState<CmsLetterRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lessonUuid, setLessonUuid] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [editingLetter, setEditingLetter] = useState<CmsLetterRow | null>(null);
   const [addingLetter, setAddingLetter] = useState(false);
@@ -1106,13 +1107,42 @@ function LetterManagement({ lessonId, lessonTitle, theme, onBack }: { lessonId: 
 
   useEffect(() => {
     cancelledRef.current = false;
-    loadLetters();
+    let active = true;
+    async function resolveUuid() {
+      const { data, error } = await supabase
+        .from('cms_lessons')
+        .select('id')
+        .eq('lesson_key', lessonId)
+        .maybeSingle();
+      if (!active || cancelledRef.current) return;
+      if (error || !data?.id) {
+        setLessonUuid(null);
+        setSaveStatus({ type: 'error', message: 'Lesson not found in CMS. Save the lesson first.' });
+      } else {
+        setLessonUuid(data.id);
+      }
+    }
+    resolveUuid();
     return () => {
+      active = false;
       cancelledRef.current = true;
     };
   }, [lessonId]);
 
+  useEffect(() => {
+    if (!lessonUuid) {
+      setLoading(false);
+      return;
+    }
+    cancelledRef.current = false;
+    loadLetters();
+    return () => {
+      cancelledRef.current = true;
+    };
+  }, [lessonUuid]);
+
   async function loadLetters() {
+    if (!lessonUuid) return;
     try {
       setLoading(true);
       setSaveStatus(null);
@@ -1120,7 +1150,7 @@ function LetterManagement({ lessonId, lessonTitle, theme, onBack }: { lessonId: 
       const { data, error } = await supabase
         .from('cms_lesson_letters')
         .select('*')
-        .eq('lesson_id', lessonId)
+        .eq('lesson_id', lessonUuid)
         .order('position', { ascending: true });
 
       if (cancelledRef.current) return;
@@ -1147,12 +1177,15 @@ function LetterManagement({ lessonId, lessonTitle, theme, onBack }: { lessonId: 
     if (!arabic.trim() || !english.trim()) {
       throw new Error('Arabic and English fields are required.');
     }
+    if (!lessonUuid) {
+      throw new Error('Lesson not found in CMS. Save the lesson first.');
+    }
 
     const maxPosition = letters.length > 0 ? Math.max(...letters.map((l) => l.position)) : 0;
     const { data, error } = await supabase
       .from('cms_lesson_letters')
       .insert({
-        lesson_id: lessonId,
+        lesson_id: lessonUuid,
         position: maxPosition + 1,
         arabic: arabic.trim(),
         english: english.trim(),

@@ -6,6 +6,8 @@ export interface TestModeContextValue {
   testRole: TestRole;
   setTestRole: (role: TestRole) => void;
   clearTestRole: () => void;
+  simulatedStudentId: string | null;
+  setSimulatedStudentId: (id: string | null) => void;
 }
 
 export const TestModeContext = createContext<TestModeContextValue | null>(null);

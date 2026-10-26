@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TOTAL_LETTERS } from '@/data/letters';
 import type { ClassLevel } from '@/App';
 
@@ -11,7 +11,10 @@ export interface ScoreData {
   writingUnlocked: number; // index (1-based) of next letter to trace
 }
 
-function storageKey(selectedClass: ClassLevel) {
+function storageKey(selectedClass: ClassLevel, userId: string | null) {
+  if (userId) {
+    return `madrasa-arabic-quiz-progress-u${userId}-class-${selectedClass}`;
+  }
   return `madrasa-arabic-quiz-progress-class-${selectedClass}`;
 }
 
@@ -24,9 +27,9 @@ const DEFAULT_DATA: ScoreData = {
   writingUnlocked: 1,
 };
 
-function load(selectedClass: ClassLevel): ScoreData {
+function load(selectedClass: ClassLevel, userId: string | null): ScoreData {
   try {
-    const raw = localStorage.getItem(storageKey(selectedClass));
+    const raw = localStorage.getItem(storageKey(selectedClass, userId));
     if (!raw) return DEFAULT_DATA;
     const parsed = JSON.parse(raw) as Partial<ScoreData>;
     return { ...DEFAULT_DATA, ...parsed, quizTotal: TOTAL_LETTERS };
@@ -35,24 +38,29 @@ function load(selectedClass: ClassLevel): ScoreData {
   }
 }
 
-function save(selectedClass: ClassLevel, data: ScoreData) {
+function save(selectedClass: ClassLevel, userId: string | null, data: ScoreData) {
   try {
-    localStorage.setItem(storageKey(selectedClass), JSON.stringify(data));
+    localStorage.setItem(storageKey(selectedClass, userId), JSON.stringify(data));
   } catch {
     // ignore
   }
 }
 
-export function useScoreStore(selectedClass: ClassLevel) {
-  const [data, setData] = useState<ScoreData>(() => load(selectedClass));
+export function useScoreStore(selectedClass: ClassLevel, userId: string | null = null) {
+  const loadedIdentityRef = useRef<string | null>(null);
+  const identityKey = `${userId ?? 'anon'}:${selectedClass}`;
+
+  const [data, setData] = useState<ScoreData>(() => load(selectedClass, userId));
 
   useEffect(() => {
-    setData(load(selectedClass));
-  }, [selectedClass]);
+    loadedIdentityRef.current = identityKey;
+    setData(load(selectedClass, userId));
+  }, [selectedClass, userId, identityKey]);
 
   useEffect(() => {
-    save(selectedClass, data);
-  }, [data, selectedClass]);
+    if (loadedIdentityRef.current !== identityKey) return;
+    save(selectedClass, userId, data);
+  }, [data, selectedClass, userId, identityKey]);
 
   const recordQuizResult = useCallback((score: number) => {
     setData((prev) => {
@@ -62,10 +70,9 @@ export function useScoreStore(selectedClass: ClassLevel) {
         bestQuizScore: Math.max(prev.bestQuizScore, score),
         quizCompletion: 1,
       };
-      save(selectedClass, next);
       return next;
     });
-  }, [selectedClass]);
+  }, [selectedClass, userId]);
 
   const recordWritingProgress = useCallback((completedCount: number, unlockedIndex: number) => {
     setData((prev) => {
@@ -74,24 +81,21 @@ export function useScoreStore(selectedClass: ClassLevel) {
         writingCompleted: Math.max(prev.writingCompleted, completedCount),
         writingUnlocked: unlockedIndex,
       };
-      save(selectedClass, next);
       return next;
     });
-  }, [selectedClass]);
+  }, [selectedClass, userId]);
 
   const resetWriting = useCallback(() => {
     setData((prev) => {
       const next = { ...prev, writingCompleted: 0, writingUnlocked: 1 };
-      save(selectedClass, next);
       return next;
     });
-  }, [selectedClass]);
+  }, [selectedClass, userId]);
 
   const resetAll = useCallback(() => {
     const next = DEFAULT_DATA;
     setData(next);
-    save(selectedClass, next);
-  }, [selectedClass]);
+  }, [selectedClass, userId]);
 
   return { data, recordQuizResult, recordWritingProgress, resetWriting, resetAll };
 }

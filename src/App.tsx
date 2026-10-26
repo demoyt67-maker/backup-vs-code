@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { TopNav, BottomNav } from '@/components/Navigation';
+import { StudentNamePrompt } from '@/components/StudentNamePrompt';
+import { StudentWelcome } from '@/components/StudentWelcome';
 import { CLASS_THEMES } from '@/theme';
 import { HomeView } from '@/views/HomeView';
 import { QuizView } from '@/views/QuizView';
@@ -172,7 +174,7 @@ function ClassSelectionScreen({ onSelect, currentClass }: { onSelect: (level: Cl
                   <span className="rounded-full bg-white/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white">
                     Selected
                   </span>
-                )}
+      )}
               </div>
               <h2 className="text-2xl font-black">{title}</h2>
               <p className="mt-2 text-sm text-white/85">{subtitle}</p>
@@ -268,6 +270,36 @@ function App() {
   const [selectedClass, setSelectedClass] = useState<ClassLevel | null>(() => loadSelectedClass());
   const [isSuperAdminMode, setIsSuperAdminMode] = useState<boolean>(() => loadSuperAdminMode());
   const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>(() => loadAppearanceMode());
+  const [studentName, setStudentName] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('madrasa-student-name');
+    } catch {
+      return null;
+    }
+  });
+  const [showWelcome, setShowWelcome] = useState(false);
+  useEffect(() => {
+    try {
+      if (simulatedStudentId) {
+        setStudentName(localStorage.getItem(`madrasa-test-student-name-${simulatedStudentId}`));
+        const raw = localStorage.getItem(`madrasa-test-student-class-${simulatedStudentId}`);
+        const parsed = raw ? Number(raw) : 1;
+        if (parsed === 1 || parsed === 2 || parsed === 3) {
+          setSelectedClass(parsed as ClassLevel);
+        } else {
+          setSelectedClass(1);
+        }
+      } else {
+        setStudentName(localStorage.getItem('madrasa-student-name'));
+        setSelectedClass(loadSelectedClass());
+      }
+    } catch {
+      setStudentName(localStorage.getItem('madrasa-student-name'));
+      setSelectedClass(loadSelectedClass());
+    }
+    setShowWelcome(false);
+    setView('home');
+  }, [simulatedStudentId]);
   const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
       return false;
@@ -279,6 +311,7 @@ function App() {
     return sessionStorage.getItem(USTAD_FLOW_KEY) === 'true';
   });
   const [testRole, setTestRole] = useState<TestRole>(null);
+  const [simulatedStudentId, setSimulatedStudentId] = useState<string | null>(null);
 
   const { user, loading, initialized, login, logout, isSuperAdmin } = useAuth();
   const { profile: ustadProfile, status: ustadStatus, loading: ustadLoading, refetch: refetchUstad } = useUstadAuth(user?.email);
@@ -366,7 +399,8 @@ function App() {
     [currentClassOnSelection, effectiveAppearance]
   );
 
-  const { data, recordQuizResult, recordWritingProgress, resetAll } = useScoreStore(selectedClass ?? 1);
+  const effectiveUserId = simulatedStudentId ? simulatedStudentId : (user?.id ?? null);
+  const { data, recordQuizResult, recordWritingProgress, resetAll } = useScoreStore(selectedClass ?? 1, effectiveUserId);
   const {
     learned, toggleLetter,
     harakatLearned, toggleHarakat, markHarakat,
@@ -377,7 +411,7 @@ function App() {
     wordsLearned, toggleWord, markWord,
     alphabetOrderLearned, toggleAlphabetOrder,
     resetLearning,
-  } = useLearningProgress(selectedClass ?? 1);
+  } = useLearningProgress(selectedClass ?? 1, effectiveUserId);
   const effectiveIsSuperAdmin = testRole === 'super-admin' ? true : isSuperAdmin;
   const effectiveIsSuperAdminMode = testRole === 'super-admin' ? true : isSuperAdminMode;
   const effectiveUstadStatus = testRole
@@ -410,10 +444,15 @@ function App() {
   }, [isEnabled, isSuperAdmin, isSuperAdminMode, effectiveUstadStatus, selectedClass]);
   const goHome = useCallback(() => setView('home'), []);
   const handleSelectClass = useCallback((level: ClassLevel) => {
-    saveSelectedClass(level);
+    try {
+      const key = simulatedStudentId ? `madrasa-test-student-class-${simulatedStudentId}` : SELECTED_CLASS_KEY;
+      localStorage.setItem(key, String(level));
+    } catch {
+      // ignore
+    }
     setSelectedClass(level);
     setView('home');
-  }, []);
+  }, [simulatedStudentId]);
   const toggleSuperAdminMode = useCallback(() => {
     setIsSuperAdminMode((prev) => {
       const next = !prev;
@@ -457,8 +496,10 @@ function App() {
   const contextValue = useMemo(() => ({
     testRole: testRole as TestModeContextValue['testRole'],
     setTestRole: (role: TestModeContextValue['testRole']) => setTestRole(role),
-    clearTestRole: () => setTestRole(null),
-  }), [testRole]);
+    clearTestRole: () => { setTestRole(null); setSimulatedStudentId(null); },
+    simulatedStudentId,
+    setSimulatedStudentId,
+  }), [testRole, simulatedStudentId]);
 
   if (!initialized || loading) {
     return <LoadingScreen />;
@@ -486,6 +527,41 @@ function App() {
       }}
     >
       <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={wrappedLogout} />
+      {initialized && !loading && !studentName && (testRole === 'student' || !(isSuperAdmin || isSuperAdminMode || effectiveUstadStatus === 'approved')) && (
+        <StudentNamePrompt
+          onAccept={(name) => {
+            try {
+              const key = simulatedStudentId ? `madrasa-test-student-name-${simulatedStudentId}` : 'madrasa-student-name';
+              localStorage.setItem(key, name);
+            } catch {
+              // ignore
+            }
+            setStudentName(name);
+            try {
+              const welcomedKey = simulatedStudentId ? `madrasa-test-student-welcomed-${simulatedStudentId}` : 'madrasa-student-welcomed';
+              if (localStorage.getItem(welcomedKey) !== name) {
+                setShowWelcome(true);
+              }
+            } catch {
+              setShowWelcome(true);
+            }
+          }}
+        />
+      )}
+      {showWelcome && studentName && (
+        <StudentWelcome
+          name={studentName}
+          onStart={() => {
+            try {
+              const welcomedKey = simulatedStudentId ? `madrasa-test-student-welcomed-${simulatedStudentId}` : 'madrasa-student-welcomed';
+              localStorage.setItem(welcomedKey, studentName ?? '');
+            } catch {
+              // ignore
+            }
+            setShowWelcome(false);
+          }}
+        />
+      )}
       <main className="md:pt-0">
          {(view === 'ustadDashboard' || view === 'ustadPending' || view === 'ustadRegister' || view === 'ustadRejected' || view === 'ustadQuiz' || view === 'ustadPanel' || view === 'ustadLearning' || view === 'ustadDailyIslamic' || view === 'ustadTeaching') ? (
           <>

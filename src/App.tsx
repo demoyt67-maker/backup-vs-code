@@ -278,6 +278,7 @@ function App() {
     }
   });
   const [showWelcome, setShowWelcome] = useState(false);
+  const [simulatedStudentId, setSimulatedStudentId] = useState<string | null>(null);
   useEffect(() => {
     try {
       if (simulatedStudentId) {
@@ -311,8 +312,6 @@ function App() {
     return sessionStorage.getItem(USTAD_FLOW_KEY) === 'true';
   });
   const [testRole, setTestRole] = useState<TestRole>(null);
-  const [simulatedStudentId, setSimulatedStudentId] = useState<string | null>(null);
-
   const { user, loading, initialized, login, logout, isSuperAdmin } = useAuth();
   const { profile: ustadProfile, status: ustadStatus, loading: ustadLoading, refetch: refetchUstad } = useUstadAuth(user?.email);
   const { isEnabled, features } = useFeatureControl();

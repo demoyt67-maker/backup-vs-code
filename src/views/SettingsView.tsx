@@ -1,6 +1,9 @@
 import type { View } from '@/types';
 import { CLASS_THEMES } from '@/theme';
-import { LogOut, Bug } from 'lucide-react';
+import { LogOut, Bug, Pencil, Check, X } from 'lucide-react';
+import { useState } from 'react';
+import { validateStudentName } from '@/lib/studentNameValidation';
+import type { User } from '@supabase/supabase-js';
 
 type Theme = (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
 
@@ -14,9 +17,27 @@ interface Props {
   onChangeAppearanceMode: (mode: 'light' | 'dark' | 'system') => void;
   user?: User | null;
   onLogout?: () => void;
+  studentName?: string | null;
+  onUpdateStudentName?: (name: string) => void;
 }
 
-export function SettingsView({ onNavigate, theme, isSuperAdmin, isSuperAdminMode, onToggleSuperAdminMode, appearanceMode, onChangeAppearanceMode, user, onLogout }: Props) {
+export function SettingsView({ onNavigate, theme, isSuperAdmin, isSuperAdminMode, onToggleSuperAdminMode, appearanceMode, onChangeAppearanceMode, user, onLogout, studentName, onUpdateStudentName }: Props) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(studentName ?? '');
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSave = () => {
+    const result = validateStudentName(draft);
+    if (!result.ok) {
+      setError(result.error ?? 'Please enter your real name.');
+      return;
+    }
+    const trimmed = draft.trim();
+    onUpdateStudentName?.(trimmed);
+    setEditing(false);
+    setError(null);
+  };
+
   const appearanceOptions: { mode: 'light' | 'dark' | 'system'; label: string; description: string }[] = [
     { mode: 'light', label: 'Light', description: 'Always light' },
     { mode: 'dark', label: 'Dark', description: 'Always dark' },
@@ -48,6 +69,38 @@ export function SettingsView({ onNavigate, theme, isSuperAdmin, isSuperAdminMode
           </div>
         </div>
       )}
+
+      <div className="liquid-panel mb-4 rounded-[1.4rem] p-4 shadow-sm" style={{ border: `1px solid ${theme.border}`, background: theme.surface }}>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: theme.primaryStrong }}>Student Name</p>
+            {editing ? (
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="text"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <button onClick={handleSave} className="rounded-xl bg-primary-700 px-3 py-2 text-white"><Check size={16} /></button>
+                <button onClick={() => { setEditing(false); setDraft(studentName ?? ''); setError(null); }} className="rounded-xl bg-slate-200 px-3 py-2 text-slate-700"><X size={16} /></button>
+              </div>
+            ) : (
+              <h3 className="mt-1 text-base font-bold" style={{ color: theme.text }}>{studentName || 'Not set'}</h3>
+            )}
+            {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+          </div>
+          {!editing && (
+            <button
+              onClick={() => { setDraft(studentName ?? ''); setEditing(true); setError(null); }}
+              className="liquid-button interactive-card inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-primary-700 shadow-sm ring-1 ring-primary-100 transition-all hover:bg-primary-50 active:scale-95"
+            >
+              <Pencil size={16} />
+              Edit
+            </button>
+          )}
+        </div>
+      </div>
 
       <div className="flex flex-col gap-4">
         <div className="liquid-panel rounded-[1.4rem] p-4 shadow-sm" style={{ border: `1px solid ${theme.border}`, background: theme.surface }}>

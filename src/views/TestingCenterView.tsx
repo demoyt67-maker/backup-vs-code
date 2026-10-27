@@ -5,7 +5,7 @@ import { User, Shield, Clock3, XCircle, GraduationCap, Monitor, Plus, Trash2, Pe
 import type { View } from '@/types';
 import { useTestMode, type TestRole } from '@/contexts/TestModeContext';
 import { StudentNamePrompt } from '@/components/StudentNamePrompt';
-import { loadTestStudents, saveTestStudents, createTestStudent, deleteTestStudentData, type TestStudent } from '@/lib/testStudents';
+import { loadTestStudents, saveTestStudents, createTestStudent, deleteTestStudentData, simulateLessonCompletion, setSampleQuizResult, resetTestStudent, type TestStudent } from '@/lib/testStudents';
 
 type Theme = (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
 
@@ -256,6 +256,39 @@ export function TestingCenterView({ onNavigate, theme }: Props) {
           ))}
         </ul>
       </div>
+
+      {simulatedStudentId && (
+        <div className="mt-6 rounded-[1.4rem] border border-amber-200 bg-amber-50/50 p-4">
+          <h3 className="text-sm font-bold text-amber-900">Quick Test Actions</h3>
+          <p className="mt-1 text-xs text-amber-800">
+            Lesson completion simulation uses static lesson progress keys. CMS-enabled lessons may still appear incomplete.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={() => { simulateLessonCompletion(simulatedStudentId); window.location.reload(); }}
+              className="rounded-xl bg-amber-600 px-3 py-2 text-xs font-bold text-white"
+            >
+              Simulate Static Lesson Completion
+            </button>
+            <button
+              onClick={() => { setSampleQuizResult(simulatedStudentId); window.location.reload(); }}
+              className="rounded-xl bg-amber-600 px-3 py-2 text-xs font-bold text-white"
+            >
+              Set Sample Quiz Result
+            </button>
+            <button
+              onClick={() => {
+                if (!window.confirm('Reset this simulated student test data?')) return;
+                resetTestStudent(simulatedStudentId);
+                window.location.reload();
+              }}
+              className="rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white"
+            >
+              Reset Test Student
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 rounded-[1.4rem] border border-blue-200 bg-blue-50/50 p-4">
         <p className="text-sm font-bold text-blue-900">ℹ️ About Test Mode</p>

@@ -437,7 +437,7 @@ export function LearnView({
             icon={<BookOpen size={24} />}
             hint={!set1Complete ? `Complete all ${set1TotalLetters} letters to unlock ${SET2_TITLE}` : undefined}
           />
-          <div className="space-y-3">
+          <div className="relative space-y-3 before:absolute before:left-4 before:top-2 before:h-[calc(100%-1rem)] before:w-1 before:rounded-full before:bg-gradient-to-b before:from-primary-300 before:via-gold-300 before:to-primary-300">
             {cmsLevels.map(({ level, letters: levelLetters }) => {
               const letters = (levelLetters && levelLetters.length > 0) ? levelLetters : ARABIC_LETTERS.slice(0, SET1_LEVEL_SIZE);
               const unlocked = isSet1LevelUnlocked(level);
@@ -497,9 +497,13 @@ export function LearnView({
                       <div className="mx-auto mt-5 max-w-[260px] sm:max-w-[280px]">
                         <div className="overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-primary-50 to-white p-1.5 shadow-inner ring-1 ring-primary-100">
                           <img
-                            src={getLetterIllustrationUrl(currentLetter)}
+                            src={`/illustrations/letters/${currentLetter.index}.png`}
                             alt={`${currentVisual.label} illustration`}
                             className="h-auto w-full rounded-[1.2rem] object-contain"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              target.src = getLetterIllustrationUrl(currentLetter);
+                            }}
                           />
                         </div>
                       </div>
@@ -521,6 +525,39 @@ export function LearnView({
                         </div>
                       </div>
                     </div>
+
+                    {(() => {
+                      const strip = (str: string) => str.replace(/[\u064B-\u065F\u0670]/g, '');
+                      const letterBase = strip(currentLetter.arabic).charAt(0);
+                      const words = ARABIC_WORDS.filter((w) => strip(w.arabic).charAt(0) === letterBase).slice(0, 3);
+                      const categoryEmoji: Record<string, string> = { family: '👨‍👩‍👧', animals: '🐾', food: '🍎', school: '📚', objects: '📦' };
+                      return (
+                        <div className="mt-4 rounded-[1.25rem] bg-white/80 p-3 ring-1 ring-primary-100">
+                          <p className="mb-2 text-center text-xs font-black uppercase tracking-wider text-primary-700">Explore Words</p>
+                          {words.length === 0 ? (
+                            <p className="text-center text-xs text-primary-600">No words available yet for this letter.</p>
+                          ) : (
+                            <div className="flex flex-wrap justify-center gap-2">
+                              {words.map((w) => (
+                                <div key={w.id} className="flex min-w-[90px] flex-col items-center rounded-xl bg-primary-50 px-3 py-2 text-center ring-1 ring-primary-100">
+                                  {currentLetter.index <= 27 && (
+                                    <img
+                                      src={`/illustrations/words/p${currentLetter.index}.png`}
+                                      alt={w.english}
+                                      className="mb-1 h-12 w-12 rounded-lg object-contain"
+                                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                  )}
+                                  <span className="mt-1 font-arabic text-lg font-bold text-primary-900">{w.arabic}</span>
+                                  <span className="text-[11px] font-semibold text-primary-700">{w.english}</span>
+                                  <span className="text-[10px] text-primary-600">{w.malayalam}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-2">

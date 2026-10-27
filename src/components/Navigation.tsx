@@ -1,4 +1,4 @@
-import { Home, BookOpen, PenTool, BarChart3, Settings, Shield, LogOut, LayoutDashboard } from 'lucide-react';
+import { Home, BookOpen, PenTool, BarChart3, Settings, Shield, LogOut, LayoutDashboard, User as UserRoundIcon } from 'lucide-react';
 import type { View } from '@/types';
 import type { User } from '@supabase/supabase-js';
 import { useAuth } from '@/hooks/useAuth';
@@ -47,9 +47,10 @@ interface Props {
   isApprovedUstad?: boolean;
   testRole?: string | null;
   onLogout?: () => void;
+  studentName?: string | null;
 }
 
-export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews, user, loading, isSuperAdmin, isApprovedUstad, testRole, onLogout }: Props) {
+export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews, user, loading, isSuperAdmin, isApprovedUstad, testRole, onLogout, studentName }: Props) {
   const effectiveIsSuperAdmin = testRole === 'super-admin' ? true : isSuperAdmin;
   const effectiveIsSuperAdminMode = testRole === 'super-admin' ? true : isSuperAdminMode;
   const adminItem: NavItem = { view: 'superAdmin', label: 'Admin', icon: Shield };
@@ -66,6 +67,12 @@ export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSup
       className="fixed inset-x-0 bottom-0 z-40 border-t bg-white/80 px-2 py-2 backdrop-blur-xl md:hidden"
       style={{ borderColor: theme?.border ?? 'rgba(11,66,57,0.12)', boxShadow: '0 -10px 24px rgba(15, 58, 49, 0.08)' }}
     >
+      {studentName && (
+        <div className="mx-auto mb-1 flex max-w-md items-center justify-center gap-1.5 rounded-full bg-white/70 px-3 py-1 text-xs font-medium" style={{ color: theme?.text ?? '#0b4239' }}>
+          <UserRoundIcon size={12} />
+          <span className="max-w-[120px] truncate">{studentName}</span>
+        </div>
+      )}
       {testRole && (
         <div
           className="fixed top-3 right-3 z-50 h-3.5 w-3.5 rounded-full bg-yellow-400"
@@ -129,7 +136,7 @@ export function BottomNav({ current, onNavigate, theme, selectedClass = 1, isSup
 
 type TopNavProps = Props;
 
-export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews, user, loading, isSuperAdmin, isApprovedUstad, testRole, onLogout }: TopNavProps) {
+export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperAdminMode = false, enabledViews, user, loading, isSuperAdmin, isApprovedUstad, testRole, onLogout, studentName }: TopNavProps) {
   const effectiveIsSuperAdmin = testRole === 'super-admin' ? true : isSuperAdmin;
   const effectiveIsSuperAdminMode = testRole === 'super-admin' ? true : isSuperAdminMode;
   const adminItem: NavItem = { view: 'superAdmin', label: 'Admin', icon: Shield };
@@ -173,6 +180,12 @@ export function TopNav({ current, onNavigate, theme, selectedClass = 1, isSuperA
             </span>
           </span>
         </button>
+        {studentName && (
+          <span className="flex items-center gap-1.5 rounded-full border border-white/50 bg-white/70 px-3 py-1.5 text-sm font-medium md:flex" style={{ color: theme?.text ?? '#0b4239', borderColor: theme?.border ?? 'rgba(11,66,57,0.12)' }}>
+            <UserRoundIcon size={14} />
+            <span className="max-w-[120px] truncate">{studentName}</span>
+          </span>
+        )}
         <nav className="flex items-center gap-1.5 rounded-full border border-white/50 bg-white/70 p-1.5 shadow-sm backdrop-blur-md" style={{ borderColor: theme?.border ?? 'rgba(11,66,57,0.12)' }}>
           {filteredItems.map(({ view, label, icon: Icon }) => {
             const active = current === view || (view === 'home' && current === 'quiz');

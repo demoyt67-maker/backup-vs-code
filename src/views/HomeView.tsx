@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { PenTool, BookOpen, BarChart3, PlayCircle, GraduationCap, Sparkles, Volume2 } from 'lucide-react';
 import type { View } from '@/types';
 import type { ScoreData } from '@/hooks/useScoreStore';
+import { TOTAL_LETTERS } from '@/data/letters';
 import { CLASS_THEMES } from '@/theme';
 import { useFeatureControl } from '@/hooks/useFeatureControl';
 import { supabase } from '@/lib/supabaseClient';
@@ -11,13 +12,14 @@ type AppearanceMode = 'light' | 'dark' | 'system';
 interface Props {
   onNavigate: (v: View) => void;
   score: ScoreData;
-  selectedClass: 1 | 2 | 3;
+  selectedClass: 1 | 2 | 3 | null;
   onSelectClass: (level: 1 | 2 | 3) => void;
   theme: (typeof CLASS_THEMES)[keyof typeof CLASS_THEMES];
   appearanceMode: AppearanceMode;
   onChangeAppearanceMode: (mode: AppearanceMode) => void;
   isSuperAdminMode: boolean;
   onToggleSuperAdminMode: () => void;
+  studentName?: string | null;
 }
 
 interface Announcement {
@@ -220,6 +222,7 @@ export function HomeView({
   onChangeAppearanceMode,
   isSuperAdminMode,
   onToggleSuperAdminMode,
+  studentName,
 }: Props) {
   const { isEnabled } = useFeatureControl();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -430,6 +433,11 @@ export function HomeView({
         <div className="home-hero-lines pointer-events-none absolute inset-0 opacity-60" />
         <div className="relative grid items-center gap-8 md:grid-cols-[1.15fr_0.85fr] md:gap-10">
           <div className="text-center md:text-left">
+            {studentName ? (
+              <p className="mb-2 text-sm font-semibold text-white/90">Welcome, {studentName}!</p>
+            ) : (
+              <p className="mb-2 text-sm font-semibold text-white/90">Welcome!</p>
+            )}
             <span className="inline-flex items-center gap-2 rounded-full border border-white/20 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/90" style={{ background: theme.accentSoft }}>
               <span className="h-1.5 w-1.5 rounded-full bg-gold-300" />
               Your Arabic learning space
@@ -471,6 +479,39 @@ export function HomeView({
             </div>
           </div>
         </div>
+      </div>
+
+      {(() => {
+        const writingTotal = TOTAL_LETTERS > 0 ? TOTAL_LETTERS : 1;
+        const writingCompleted = Math.min(Math.max(score?.writingCompleted ?? 0, 0), writingTotal);
+        const writingPct = Math.round((writingCompleted / writingTotal) * 100);
+        const quizDone = score?.quizCompletion === 1;
+        return (
+          <div className="rounded-2xl border border-white/20 bg-white/10 p-4 text-white shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/80">Your Progress</p>
+            <div className="mt-2">
+              <div className="mb-1 flex justify-between text-xs text-white/80">
+                <span>Writing</span>
+                <span>{writingCompleted}/{TOTAL_LETTERS}</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-white/20">
+                <div className="h-full rounded-full bg-gold-400 transition-all" style={{ width: `${writingPct}%` }} />
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-white/80">
+              Quiz: {quizDone ? 'Completed' : 'Not completed yet'}
+            </p>
+          </div>
+        );
+      })()}
+
+      <div className="mt-4">
+        <button
+          onClick={() => onNavigate('learn')}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-primary-700 shadow-md transition-all hover:shadow-lg active:scale-95 sm:w-auto"
+        >
+          <BookOpen size={18} /> Continue Learning
+        </button>
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-4 md:gap-4">

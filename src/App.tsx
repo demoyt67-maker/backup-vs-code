@@ -278,7 +278,20 @@ function App() {
     }
   });
   const [showWelcome, setShowWelcome] = useState(false);
-  const [simulatedStudentId, setSimulatedStudentId] = useState<string | null>(null);
+  const [simulatedStudentId, setSimulatedStudentId] = useState<string | null>(() => {
+    try {
+      const id = localStorage.getItem('madrasa-test-active-student-id');
+      if (!id) return null;
+      const students = JSON.parse(localStorage.getItem('madrasa-test-students') || '[]');
+      if (Array.isArray(students) && students.some((s: { id?: string }) => s?.id === id)) {
+        return id;
+      }
+      localStorage.removeItem('madrasa-test-active-student-id');
+      return null;
+    } catch {
+      return null;
+    }
+  });
   useEffect(() => {
     try {
       if (simulatedStudentId) {
@@ -492,13 +505,23 @@ function App() {
     return views;
   }, [isEnabled, testRole, isSuperAdmin, isSuperAdminMode, effectiveUstadStatus]);
 
+  const setSimulatedStudentIdPersisted = useCallback((id: string | null) => {
+    try {
+      if (id) localStorage.setItem('madrasa-test-active-student-id', id);
+      else localStorage.removeItem('madrasa-test-active-student-id');
+    } catch {
+      // ignore
+    }
+    setSimulatedStudentId(id);
+  }, []);
+
   const contextValue = useMemo(() => ({
     testRole: testRole as TestModeContextValue['testRole'],
     setTestRole: (role: TestModeContextValue['testRole']) => setTestRole(role),
-    clearTestRole: () => { setTestRole(null); setSimulatedStudentId(null); },
+    clearTestRole: () => { setTestRole(null); setSimulatedStudentIdPersisted(null); },
     simulatedStudentId,
-    setSimulatedStudentId,
-  }), [testRole, simulatedStudentId]);
+    setSimulatedStudentId: setSimulatedStudentIdPersisted,
+  }), [testRole, simulatedStudentId, setSimulatedStudentIdPersisted]);
 
   if (!initialized || loading) {
     return <LoadingScreen />;
@@ -525,7 +548,7 @@ function App() {
         transition: 'background-color 500ms ease, color 500ms ease, border-color 500ms ease, box-shadow 500ms ease, background 500ms ease',
       }}
     >
-      <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={wrappedLogout} />
+      <TopNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={wrappedLogout} studentName={studentName || 'Student'} />
       {initialized && !loading && !studentName && (testRole === 'student' || !(isSuperAdmin || isSuperAdminMode || effectiveUstadStatus === 'approved')) && (
         <StudentNamePrompt
           onAccept={(name) => {
@@ -638,6 +661,7 @@ function App() {
             onChangeAppearanceMode={updateAppearanceMode}
             isSuperAdminMode={isSuperAdminMode}
             onToggleSuperAdminMode={toggleSuperAdminMode}
+            studentName={studentName}
           />
         )}
         {selectedClass && view === 'quiz' && isEnabled('quiz') && (
@@ -704,6 +728,16 @@ function App() {
             onChangeAppearanceMode={updateAppearanceMode}
             user={user}
             onLogout={logout}
+            studentName={studentName}
+            onUpdateStudentName={(name) => {
+              try {
+                const key = simulatedStudentId ? `madrasa-test-student-name-${simulatedStudentId}` : 'madrasa-student-name';
+                localStorage.setItem(key, name);
+              } catch {
+                // ignore
+              }
+              setStudentName(name);
+            }}
           />
         )}
         {selectedClass && view === 'report' && (
@@ -772,7 +806,7 @@ function App() {
         )}
       </main>
         {selectedClass && view !== 'home' && view !== 'settings' && view !== 'superAdmin' && view !== 'superAdminStudents' && view !== 'adminReports' && view !== 'featureControl' && view !== 'announcementManagement' && view !== 'cms' && view !== 'ustadDashboard' && view !== 'ustadPending' && view !== 'ustadRegister' && view !== 'ustadRejected' && view !== 'ustadRequests' && view !== 'ustadQuiz' && view !== 'ustadPanel' && view !== 'ustadLearning' && view !== 'ustadDailyIslamic' && view !== 'ustadTeaching' && view !== 'dailyIslamic' && view !== 'testingCenter' && (
-        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={wrappedLogout} />
+        <BottomNav current={view} onNavigate={navigate} theme={selectedTheme} selectedClass={selectedClass ?? 1} isSuperAdminMode={isSuperAdminMode} enabledViews={enabledViews} user={user} loading={loading} isSuperAdmin={isSuperAdmin} isApprovedUstad={effectiveUstadStatus === 'approved'} testRole={testRole} onLogout={wrappedLogout} studentName={studentName || 'Student'} />
       )}
     </div>
     </TestModeContext.Provider>

@@ -119,8 +119,8 @@ export function LearnView({
   }: Props) {
   const availableSets = AVAILABLE_SETS_BY_CLASS[selectedClass];
   const cms = useCMSClass1Data();
-  const cmsLevels = (cms.usingCMS && cms.levels.length > 0) ? cms.levels : SET1_LEVELS;
-  const cmsLetters = (cms.usingCMS && cms.letters.length > 0) ? cms.letters : ARABIC_LETTERS;
+  const cmsLevels = (cms.usingCMS && cms.levels.length >= SET1_TOTAL_LEVELS) ? cms.levels : SET1_LEVELS;
+  const cmsLetters = (cms.usingCMS && cms.letters.length >= ARABIC_LETTERS.length) ? cms.letters : ARABIC_LETTERS;
   const cmsHarakatLevels = (cms.usingCMS && cms.harakatLevels.length > 0) ? cms.harakatLevels : SET2_LEVELS;
   const cmsSukoonLevels = (cms.usingCMS && cms.sukoonLevels.length > 0) ? cms.sukoonLevels : SET4_LEVELS;
   const set1TotalLetters = cmsLetters.length;
@@ -481,31 +481,21 @@ export function LearnView({
                           Letter {currentLetter.index} of {set1TotalLetters}
                         </div>
 
-                        <div className="mb-6 flex items-center justify-center">
-                          <span className="font-arabic text-[7rem] leading-none text-primary-900 drop-shadow-[0_10px_24px_rgba(13,82,74,0.18)] sm:text-[8rem]">
-                            {currentLetter.arabic}
-                          </span>
+                        <div className="mx-auto mt-2 max-w-[320px] sm:max-w-[380px]">
+                          <div className="overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-primary-50 to-white p-1.5 shadow-inner ring-1 ring-primary-100">
+                            <img
+                              src={`/illustrations/letters/${currentLetter.index}.png`}
+                              alt={`${currentVisual.label} illustration`}
+                              className="h-auto w-full rounded-[1.2rem] object-contain"
+                              onError={(e) => {
+                                const target = e.currentTarget;
+                                target.src = getLetterIllustrationUrl(currentLetter);
+                              }}
+                            />
+                          </div>
                         </div>
 
-                        <p className="mt-4 font-arabic text-[2.5rem] leading-tight text-primary-800 sm:text-[3rem]">
-                          {currentVisual.arabicObjectName}
-                        </p>
-
-                        <p className="mt-2 text-lg font-bold text-primary-700">{currentVisual.label}</p>
-                      </div>
-
-                      <div className="mx-auto mt-5 max-w-[260px] sm:max-w-[280px]">
-                        <div className="overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-primary-50 to-white p-1.5 shadow-inner ring-1 ring-primary-100">
-                          <img
-                            src={`/illustrations/letters/${currentLetter.index}.png`}
-                            alt={`${currentVisual.label} illustration`}
-                            className="h-auto w-full rounded-[1.2rem] object-contain"
-                            onError={(e) => {
-                              const target = e.currentTarget;
-                              target.src = getLetterIllustrationUrl(currentLetter);
-                            }}
-                          />
-                        </div>
+                        <p className="mt-3 text-lg font-bold text-primary-700">{currentLetter.english}</p>
                       </div>
 
                       <div className="mt-4">
@@ -527,33 +517,54 @@ export function LearnView({
                     </div>
 
                     {(() => {
-                      const strip = (str: string) => str.replace(/[\u064B-\u065F\u0670]/g, '');
-                      const letterBase = strip(currentLetter.arabic).charAt(0);
-                      const words = ARABIC_WORDS.filter((w) => strip(w.arabic).charAt(0) === letterBase).slice(0, 3);
-                      const categoryEmoji: Record<string, string> = { family: '👨‍👩‍👧', animals: '🐾', food: '🍎', school: '📚', objects: '📦' };
+                      const LETTER_WORDS: { arabic: string; english: string; malayalam: string }[] = [
+                        { arabic: 'أَرْنَبٌ', english: 'Rabbit', malayalam: '' },
+                        { arabic: 'بَطَّةٌ', english: 'Duck', malayalam: '' },
+                        { arabic: 'تُفَّاحَةٌ', english: 'Apple', malayalam: '' },
+                        { arabic: 'ثَعْلَبٌ', english: 'Fox', malayalam: '' },
+                        { arabic: 'جَمَلٌ', english: 'Camel', malayalam: '' },
+                        { arabic: 'حِصَانٌ', english: 'Horse', malayalam: '' },
+                        { arabic: 'خَرُوفٌ', english: 'Sheep', malayalam: '' },
+                        { arabic: 'دُبٌّ', english: 'Bear', malayalam: '' },
+                        { arabic: 'ذُرَّةٌ', english: 'Corn', malayalam: '' },
+                        { arabic: 'رُمَّانٌ', english: 'Pomegranate', malayalam: '' },
+                        { arabic: 'زَرَافَةٌ', english: 'Giraffe', malayalam: '' },
+                        { arabic: 'سَمَكَةٌ', english: 'Fish', malayalam: '' },
+                        { arabic: 'شَمْسٌ', english: 'Sun', malayalam: '' },
+                        { arabic: 'صُنْدُوقٌ', english: 'Box', malayalam: '' },
+                        { arabic: 'ضِفْدَعٌ', english: 'Frog', malayalam: '' },
+                        { arabic: 'طَائِرٌ', english: 'Bird', malayalam: '' },
+                        { arabic: 'ظَرْفٌ', english: 'Envelope', malayalam: '' },
+                        { arabic: 'عِنَبٌ', english: 'Grapes', malayalam: '' },
+                        { arabic: 'غَزَالٌ', english: 'Gazelle', malayalam: '' },
+                        { arabic: 'فِيلٌ', english: 'Elephant', malayalam: '' },
+                        { arabic: 'قَمَرٌ', english: 'Moon', malayalam: '' },
+                        { arabic: 'كِتَابٌ', english: 'Book', malayalam: '' },
+                        { arabic: 'لَيْمُونٌ', english: 'Lemon', malayalam: '' },
+                        { arabic: 'مَوْزٌ', english: 'Banana', malayalam: '' },
+                        { arabic: 'نَجْمَةٌ', english: 'Star', malayalam: '' },
+                        { arabic: 'هَدِيَّةٌ', english: 'Gift', malayalam: '' },
+                        { arabic: 'وَرْدَةٌ', english: 'Flower', malayalam: '' },
+                        { arabic: 'يَدٌ', english: 'Hand', malayalam: '' },
+                      ];
+                      const word = LETTER_WORDS[currentLetter.index - 1];
                       return (
                         <div className="mt-4 rounded-[1.25rem] bg-white/80 p-3 ring-1 ring-primary-100">
-                          <p className="mb-2 text-center text-xs font-black uppercase tracking-wider text-primary-700">Explore Words</p>
-                          {words.length === 0 ? (
-                            <p className="text-center text-xs text-primary-600">No words available yet for this letter.</p>
-                          ) : (
-                            <div className="flex flex-wrap justify-center gap-2">
-                              {words.map((w) => (
-                                <div key={w.id} className="flex min-w-[90px] flex-col items-center rounded-xl bg-primary-50 px-3 py-2 text-center ring-1 ring-primary-100">
-                                  {currentLetter.index <= 27 && (
-                                    <img
-                                      src={`/illustrations/words/p${currentLetter.index}.png`}
-                                      alt={w.english}
-                                      className="mb-1 h-12 w-12 rounded-lg object-contain"
-                                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                    />
-                                  )}
-                                  <span className="mt-1 font-arabic text-lg font-bold text-primary-900">{w.arabic}</span>
-                                  <span className="text-[11px] font-semibold text-primary-700">{w.english}</span>
-                                  <span className="text-[10px] text-primary-600">{w.malayalam}</span>
-                                </div>
-                              ))}
+                          <p className="mb-2 text-center text-xs font-black uppercase tracking-wider text-primary-700">Explore Word</p>
+                          {word ? (
+                            <div className="flex flex-col items-center gap-2">
+                              <img
+                                src={`/illustrations/words/p_${currentLetter.index}.png`}
+                                alt={word.english}
+                                className="h-32 w-32 rounded-xl object-contain"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                              <span className="font-arabic text-3xl font-bold text-primary-900">{word.arabic}</span>
+                              <span className="text-sm font-semibold text-primary-700">{word.english}</span>
+                              {word.malayalam ? <span className="text-[10px] text-primary-600">{word.malayalam}</span> : null}
                             </div>
+                          ) : (
+                            <p className="text-center text-xs text-primary-600">No word available for this letter.</p>
                           )}
                         </div>
                       );
@@ -616,7 +627,6 @@ export function LearnView({
                               }`}
                             >
                               <span className="font-arabic text-2xl">{letter.arabic}</span>
-                              <span>{letter.english}</span>
                             </button>
                           );
                         })}
